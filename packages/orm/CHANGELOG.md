@@ -1,5 +1,14 @@
 # orchid-orm
 
+## 1.68.2
+
+### Patch Changes
+
+- cd4b919e: Fix required keys in create for belongsTo relation (#687)
+- Updated dependencies [cd4b919e]
+  - pqb@0.65.2
+  - rake-db@2.33.2
+
 ## 1.68.1
 
 ### Patch Changes

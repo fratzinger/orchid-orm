@@ -1,5 +1,11 @@
 # pqb
 
+## 0.65.2
+
+### Patch Changes
+
+- cd4b919e: Fix required keys in create for belongsTo relation (#687)
+
 ## 0.65.1
 
 ### Patch Changes
