@@ -40,7 +40,6 @@ import {
   PickQueryWithData,
 } from '../../pick-query-types';
 import { EmptyObject, FnUnknownToUnknown, RecordUnknown } from '../../../utils';
-import { RelationConfigDataForCreate } from '../../relations';
 import { Expression, isExpression } from '../../expressions/expression';
 import { _getQueryFreeAlias, _setQueryAlias } from '../as/as';
 import { _clone } from '../clone/clone';
@@ -102,7 +101,7 @@ type CreateDataWithDefaultsForRelations<
     ? never
     : K]: K extends Defaults | OmitFKeys ? never : CreateColumn<T, K>;
 } & {
-  [K in Defaults as K extends OmitFKeys ? never : K]?: CreateColumn<T, K>;
+  [K in keyof T['inputType'] & (Defaults | OmitFKeys)]?: CreateColumn<T, K>;
 };
 
 // Type of available variants to provide for a specific column when creating
@@ -116,7 +115,7 @@ export type CreateRelationsData<T extends CreateSelf> =
   CreateDataWithDefaultsForRelations<
     T,
     keyof T['__defaults'],
-    T['relations'][keyof T['relations']]['omitForeignKeyInCreate']
+    T['relations'][keyof T['relations']]['columnsForCreate']
   > &
     CreateBelongsToData<T> &
     // Union of the rest relations objects, intersection is not needed here because there are no required properties:
@@ -129,46 +128,7 @@ export type CreateBelongsToData<T extends CreateSelf> = [
   T['relations'][keyof T['relations']]['dataForCreate'],
 ] extends [never]
   ? EmptyObject
-  : CreateRelationsDataOmittingFKeys<
-      T,
-      T['relations'][keyof T['relations']]['dataForCreate']
-    >;
-
-// Intersection of relations that may omit foreign key (belongsTo):
-// ({ fooId: number } | { foo: object }) & ({ barId: number } | { bar: object })
-export type CreateRelationsDataOmittingFKeys<
-  T extends CreateSelf,
-  // Collect a union of `belongsTo` relation objects.
-  Union,
-> =
-  // Based on UnionToIntersection from here https://stackoverflow.com/a/50375286
-  (
-    Union extends RelationConfigDataForCreate
-      ? (
-          u: // omit relation columns if they are in defaults, is tested in factory.test.ts
-          Union['columns'] extends keyof T['__defaults']
-            ? {
-                [P in Exclude<
-                  Union['columns'] & keyof T['inputType'],
-                  keyof T['__defaults']
-                >]: CreateColumn<T, P>;
-              } & {
-                [P in keyof T['__defaults'] & Union['columns']]?: CreateColumn<
-                  T,
-                  P
-                >;
-              } & Partial<Union['nested']>
-            :
-                | {
-                    [P in Union['columns'] &
-                      keyof T['inputType']]: CreateColumn<T, P>;
-                  }
-                | Union['nested'],
-        ) => void
-      : never
-  ) extends (u: infer Obj) => void // must be handled as a function argument, belongsTo.test relies on this
-    ? Obj
-    : never;
+  : T['relations'][keyof T['relations']]['dataForCreate'];
 
 // `create` method output type
 // - if `count` method is preceding `create`, will return 0 or 1 if created.
@@ -233,23 +193,17 @@ type NarrowCreateResult<
 > = EmptyObject extends T['relations']
   ? T['result']
   : {
-      // [K in keyof T['result']]: K extends T['relations'][keyof T['relations']]['omitForeignKeyInCreate']
       [K in keyof T['result']]: true extends {
-        [R in keyof T['relations']]: K extends T['relations'][R]['omitForeignKeyInCreate']
-          ? T['relations'][R]['dataForCreate'] extends {
-              columns: unknown;
-              nested: unknown;
-            }
-            ? keyof T['relations'][R]['dataForCreate']['nested'] extends keyof Data
-              ? true
-              : T['relations'][R]['dataForCreate']['columns'] extends keyof Data
-                ?
-                    | null
-                    | undefined extends Data[T['relations'][R]['dataForCreate']['columns']]
-                  ? never
-                  : true
-                : never
-            : never
+        [R in keyof T['relations']]: K extends T['relations'][R]['columnsForCreate']
+          ? R extends keyof Data
+            ? true
+            : T['relations'][R]['columnsForCreate'] extends keyof Data
+              ?
+                  | null
+                  | undefined extends Data[T['relations'][R]['columnsForCreate']]
+                ? never
+                : true
+              : never
           : never;
       }[keyof T['relations']]
         ? Column.Pick.QueryColumnOfTypeAndOps<
@@ -675,11 +629,37 @@ export type CreateManyMethodsNames =
   | 'insertMany'
   | CreateManyFromMethodNames;
 
+type CollectMissingColumns<T extends CreateSelf, Data> = {
+  [K in T['relations'][keyof T['relations']]['columnsForCreate']]:
+    | null
+    | undefined extends T['inputType'][K & keyof T['inputType']]
+    ? false
+    : K extends keyof T['__defaults']
+      ? false
+      : true extends {
+            [Rel in keyof T['relations']]: K extends T['relations'][Rel]['columnsForCreate']
+              ? Rel extends keyof Data
+                ? undefined extends Data[Rel]
+                  ? false
+                  : true
+                : false
+              : false;
+          }[keyof T['relations']]
+        ? false
+        : K extends keyof Data
+          ? undefined extends Data[K]
+            ? K
+            : false
+          : K;
+}[T['relations'][keyof T['relations']]['columnsForCreate']];
+
 type ExtraPropertiesAreNotAllowed<
   T extends CreateSelf,
   Data,
 > = keyof Data extends keyof T['inputType'] | keyof T['relations']
-  ? Data
+  ? CollectMissingColumns<T, Data> extends false
+    ? Data
+    : `Missing ${CollectMissingColumns<T, Data> & string}`
   : `Extra properties are not allowed: ${Exclude<keyof Data, keyof T['inputType'] | keyof T['relations']> & string}`;
 
 export class QueryCreate {
