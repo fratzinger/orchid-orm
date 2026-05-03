@@ -1,5 +1,15 @@
 # pqb
 
+## 0.65.0
+
+### Minor Changes
+
+- 86f7468a: Refactor db adapters, the only public change is `reconfigure` -> `clone` (#601)
+
+### Patch Changes
+
+- fbded6a9: Update packages build artifacts generation
+
 ## 0.64.1
 
 ### Patch Changes

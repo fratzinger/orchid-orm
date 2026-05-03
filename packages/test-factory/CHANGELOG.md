@@ -1,5 +1,14 @@
 # orchid-orm-test-factory
 
+## 1.0.117
+
+### Patch Changes
+
+- fbded6a9: Update packages build artifacts generation
+- Updated dependencies [86f7468a]
+- Updated dependencies [fbded6a9]
+  - pqb@0.65.0
+
 ## 1.0.115
 
 ### Patch Changes

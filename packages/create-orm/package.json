@@ -1,6 +1,6 @@
 {
   "name": "create-orchid-orm",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "Initialize Orchid ORM",
   "homepage": "https://orchid-orm.netlify.app/guide/quickstart.html",
   "license": "ISC",

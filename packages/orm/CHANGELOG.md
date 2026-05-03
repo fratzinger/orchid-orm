@@ -1,5 +1,19 @@
 # orchid-orm
 
+## 1.68.0
+
+### Minor Changes
+
+- 86f7468a: Refactor db adapters, the only public change is `reconfigure` -> `clone` (#601)
+
+### Patch Changes
+
+- fbded6a9: Update packages build artifacts generation
+- Updated dependencies [86f7468a]
+- Updated dependencies [fbded6a9]
+  - rake-db@2.33.0
+  - pqb@0.65.0
+
 ## 1.67.0
 
 ### Minor Changes

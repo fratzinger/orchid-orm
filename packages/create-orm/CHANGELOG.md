@@ -1,5 +1,11 @@
 # create-orchid-orm
 
+## 0.4.4
+
+### Patch Changes
+
+- fbded6a9: Update packages build artifacts generation
+
 ## 0.4.3
 
 ### Patch Changes
@@ -69,7 +75,7 @@
   Instead of importing `raw` from 'orchid-core', as was documented before, export `sql` helper from your `BaseTable` file:
 
   ```ts
-  import { createBaseTable } from 'orchid-orm';
+  import { createBaseTable } from "orchid-orm";
 
   export const BaseTable = createBaseTable();
 
