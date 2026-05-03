@@ -1,7 +1,7 @@
 import { initSteps } from '../init';
 import { mockFn, testInitConfig } from '../../testUtils';
-import fs from 'fs/promises';
-import { resolve } from 'path';
+import fs from 'node:fs/promises';
+import { resolve } from 'node:path';
 
 const writeFile = mockFn(fs, 'writeFile');
 

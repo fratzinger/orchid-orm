@@ -1,5 +1,5 @@
 import prompts from 'prompts';
-import { join, resolve, basename } from 'path';
+import { join, resolve, basename } from 'node:path';
 import { InitConfig, UserProvidedConfig } from '../lib';
 import { getPackageManagerName, readFileSafe } from './utils';
 

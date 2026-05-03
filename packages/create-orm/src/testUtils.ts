@@ -1,5 +1,5 @@
 import { InitConfig } from './lib';
-import { resolve } from 'path';
+import { resolve } from 'node:path';
 
 export const asMock = (fn: unknown) => fn as jest.Mock;
 
@@ -8,7 +8,7 @@ export class EnoentError extends Error {
 }
 
 type FunctionProperties<T> = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  //
   [K in {
     // oxlint-disable-next-line typescript/no-explicit-any
     [K in keyof T]: T[K] extends (...args: any[]) => any ? K : never;
@@ -19,7 +19,7 @@ type FunctionPropertyNames<T> = keyof FunctionProperties<T>;
 function noop() {}
 
 export function mockFn<
-  // eslint-disable-next-line @typescript-eslint/ban-types
+  //
   T extends {},
   M extends FunctionPropertyNames<Required<T>>,
 >(object: T, method: M): jest.Mock {

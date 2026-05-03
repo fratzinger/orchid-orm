@@ -1,7 +1,7 @@
 import { rebase } from './rebase';
 import { testConfig } from '../rake-db.test-utils';
-import fs from 'fs/promises';
-import path from 'path';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { asMock, TestAdapter } from 'test-utils';
 import {
   getMigratedVersionsMap,
@@ -13,7 +13,7 @@ import { pushChange } from '../migration/change';
 import { promptSelect } from '../prompt';
 import { RakeDbConfig } from 'rake-db';
 
-jest.mock('fs/promises');
+jest.mock('node:fs/promises');
 jest.mock('../migration/manage-migrated-versions');
 jest.mock('../prompt');
 jest.mock('../common', () => ({

@@ -11,6 +11,7 @@ import {
   toCamelCase,
   toSnakeCase,
   type SingleSql,
+  type QuerySchema,
 } from 'pqb/internal';
 import { ColumnComment } from './migration';
 import {
@@ -23,7 +24,6 @@ import {
 } from '../common';
 import { RakeDbConfig } from '../config';
 import { TableQuery } from './create-table';
-import { QuerySchema } from 'pqb';
 
 export const versionToString = (
   config: Pick<RakeDbConfig, 'migrationId'>,

@@ -1,6 +1,6 @@
 import { RakeDbConfig } from '../config';
-import path from 'path';
-import fs from 'fs/promises';
+import path from 'node:path';
+import fs from 'node:fs/promises';
 import { getMigrations, MigrationItem } from '../migration/migrations-set';
 import { getMigratedVersionsMap } from '../migration/manage-migrated-versions';
 import { RakeDbCtx } from '../common';

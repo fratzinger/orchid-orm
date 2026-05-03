@@ -16,6 +16,7 @@ import {
   QueryHookUtils,
   DefaultSchemaConfig,
   defaultSchemaConfig,
+  QuerySchema,
 } from 'pqb/internal';
 import { useTestORM } from './test-utils/orm.test-utils';
 import {
@@ -31,7 +32,6 @@ import {
 } from 'test-utils';
 import { z } from 'zod/v4';
 import { zodSchemaConfig } from 'orchid-orm-schema-to-zod';
-import { QuerySchema } from 'pqb';
 
 describe('baseTable', () => {
   useTestORM();

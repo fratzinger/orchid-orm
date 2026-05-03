@@ -1,7 +1,7 @@
-import fs from 'fs/promises';
+import fs from 'node:fs/promises';
 import { EnoentError, mockFn, testInitConfig } from '../../testUtils';
 import { initSteps } from '../init';
-import { resolve } from 'path';
+import { resolve } from 'node:path';
 
 const gitignorePath = resolve(testInitConfig.path, '.gitignore');
 

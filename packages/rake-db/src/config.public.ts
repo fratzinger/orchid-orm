@@ -7,7 +7,7 @@ import {
   makeColumnTypes as defaultColumnTypes,
   RecordOptionalString,
 } from 'pqb/internal';
-import path from 'path';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getCliParam } from './common';
 import {

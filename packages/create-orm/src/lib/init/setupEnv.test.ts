@@ -1,6 +1,6 @@
-import fs from 'fs/promises';
+import fs from 'node:fs/promises';
 import { initSteps } from '../init';
-import { resolve } from 'path';
+import { resolve } from 'node:path';
 import { EnoentError, mockFn, testInitConfig } from '../../testUtils';
 
 const envPath = resolve(testInitConfig.path, '.env');

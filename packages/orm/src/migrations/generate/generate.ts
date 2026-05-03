@@ -34,7 +34,7 @@ import { composeMigration, ComposeMigrationParams } from './composeMigration';
 import { verifyMigration } from './verify-migration';
 import { report } from './reportGeneratedMigration';
 import path from 'node:path';
-import { pathToFileURL } from 'url';
+import { pathToFileURL } from 'node:url';
 
 export interface CodeTable extends PickQueryShape, PickQueryInternal {
   table: string;

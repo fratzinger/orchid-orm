@@ -1,4 +1,5 @@
-import { DefaultPrivileges, RecordOptionalString } from 'pqb/internal';
+import { RecordOptionalString } from '../../../utils';
+import { DefaultPrivileges } from '../default-privileges/default-privileges';
 
 export interface DbRole {
   name: string;

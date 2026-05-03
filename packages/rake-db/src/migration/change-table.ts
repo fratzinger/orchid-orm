@@ -14,12 +14,13 @@ import {
   ArrayColumn,
   deepCompare,
   EmptyObject,
-  RawSqlBase,
   RecordKeyTrue,
   RecordUnknown,
   snakeCaseKey,
   toArray,
   toSnakeCase,
+  type QuerySchema,
+  RawSqlBase,
 } from 'pqb/internal';
 import {
   ChangeTableCallback,
@@ -54,9 +55,8 @@ import {
   nameColumnChecks,
   primaryKeyToSql,
 } from './migration.utils';
-import { tableMethods } from './table-methods';
+import { TableMethods, tableMethods } from './table-methods';
 import { TableQuery } from './create-table';
-import { QuerySchema } from 'pqb';
 
 interface ChangeTableData {
   add: TableData;
@@ -76,6 +76,7 @@ const resetChangeTableData = () => {
 
 const addOrDropChanges: RakeDbAst.ChangeTableItem.Column[] = [];
 
+type Add = typeof add;
 // add column
 function add(item: Column, options?: { dropMode?: DropMode }): SpecialChange;
 // add primary key, index, etc
@@ -158,7 +159,7 @@ const drop = function (this: TableChangeMethods, item, options) {
   }
 
   return undefined as never;
-} as typeof add;
+} as Add;
 
 const addOrDrop = (
   type: 'add' | 'drop',
@@ -255,11 +256,26 @@ const setName = (
   }
 };
 
-type TableChangeMethods = typeof tableChangeMethods;
-const tableChangeMethods = {
+interface TableChangeMethods extends TableMethods, TableDataMethods<string> {
+  name(name: string): TableChangeMethods;
+  add: Add;
+  drop: Add;
+  change(
+    from: Column | OneWayChange,
+    to: Column | OneWayChange,
+    using?: ChangeOptions,
+  ): Change;
+  default(value: unknown | RawSqlBase): OneWayChange;
+  nullable(): OneWayChange;
+  nonNullable(): OneWayChange;
+  comment(comment: string | null): OneWayChange;
+  rename(name: string): RakeDbAst.ChangeTableItem.Rename;
+}
+
+const tableChangeMethods: TableChangeMethods = {
   ...tableMethods,
-  ...(tableDataMethods as TableDataMethods<string>),
-  name(name: string) {
+  ...tableDataMethods,
+  name(name) {
     setCurrentColumnName(name);
     const types = Object.create(this);
     types[nameKey] = name;
@@ -267,11 +283,7 @@ const tableChangeMethods = {
   },
   add,
   drop,
-  change(
-    from: Column | OneWayChange,
-    to: Column | OneWayChange,
-    using?: ChangeOptions,
-  ): Change {
+  change(from, to, using) {
     consumeColumnName();
     const f = columnTypeToColumnChange(from);
     const t = columnTypeToColumnChange(to);
@@ -287,22 +299,22 @@ const tableChangeMethods = {
       using,
     };
   },
-  default(value: unknown | RawSqlBase): OneWayChange {
+  default(value) {
     return { type: 'change', to: { default: value } };
   },
-  nullable(): OneWayChange {
+  nullable() {
     return {
       type: 'change',
       to: { nullable: true },
     };
   },
-  nonNullable(): OneWayChange {
+  nonNullable() {
     return {
       type: 'change',
       to: { nullable: false },
     };
   },
-  comment(comment: string | null): OneWayChange {
+  comment(comment) {
     return { type: 'change', to: { comment } };
   },
   /**
@@ -324,7 +336,7 @@ const tableChangeMethods = {
    *
    * @param name
    */
-  rename(name: string): RakeDbAst.ChangeTableItem.Rename {
+  rename(name) {
     return { type: 'rename', name };
   },
 };

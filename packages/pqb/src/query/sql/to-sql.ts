@@ -11,18 +11,15 @@ import { SubQueryForSql } from '../internal-features/sub-query/sub-query-for-sql
 import { makeInsertSql } from '../basic-features/mutate/insert.sql';
 import { pushUpdateSql } from '../basic-features/mutate/update.sql';
 import { pushDeleteSql } from '../basic-features/mutate/delete.sql';
-import {
-  _clone,
-  _queryInsert,
-  JoinItem,
-  makeRowToJson,
-  makeSql,
-  MoreThanOneRowError,
-  QueryInternal,
-  RawSql,
-  setMutativeQueriesSelectRelationsStateOnSql,
-  Sql,
-} from '../index';
+import { _clone } from '../basic-features/clone/clone';
+import { _queryInsert } from '../basic-features/mutate/create';
+import { JoinItem } from '../basic-features/join/join.sql';
+import { makeRowToJson, makeSql } from '../sql/sql';
+import { MoreThanOneRowError } from '../errors';
+import { QueryInternal } from '../query-internal';
+import { RawSql } from '../expressions/raw-sql';
+import { setMutativeQueriesSelectRelationsStateOnSql } from '../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.sql';
+import { Sql } from '../sql/sql';
 import { moveMutativeQueryToCteBase } from '../basic-features/cte/move-mutative-query-to-cte-base.sql';
 import { pushDistinctSql } from '../basic-features/distinct/distinct.sql';
 import { setSqlCtxSelectList } from '../basic-features/select/select.sql';
@@ -41,8 +38,8 @@ import { isExpression } from '../expressions/expression';
 import { pushUnionSql } from '../basic-features/union/union.sql';
 import { pushForSql } from '../basic-features/for/for.sql';
 import { setCurrentDefaultSchema } from '../basic-features/storage/storage';
-import { emptyArray } from 'pqb/internal';
 import { MutativeQueriesSelectRelationsSqlState } from '../internal-features/mutative-queries-select-relation/mutative-queries-select-relations.sql';
+import { emptyArray } from '../../utils';
 
 interface ToSqlOptionsInternal {
   hasNonSelect?: boolean;
@@ -132,7 +129,7 @@ export const toSql: ToSql = (
   const sql: string[] = [];
   const values = topCtx?.values || [];
   const ctx: ToSQLCtx = {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    //
     topCtx: topCtx!,
     qb: table.qb,
     q: query,

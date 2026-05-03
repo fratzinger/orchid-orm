@@ -2,7 +2,7 @@ import os from 'os';
 import { AdapterConfigBase } from 'pqb/internal';
 import { testRakeDb } from '../../test-utils/src/index';
 import { config } from 'dotenv';
-import path from 'path';
+import path from 'node:path';
 import { BaseTable } from './base-table';
 
 config({ path: path.resolve('..', '..', '.env') });

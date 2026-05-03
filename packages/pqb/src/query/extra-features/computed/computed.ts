@@ -22,13 +22,9 @@ import { finalizeNestedHookSelect } from '../hooks/hooks';
 import { applyBatchTransforms } from '../data-transform/transform';
 import { QueryData } from '../../query-data';
 
-declare module '../../../columns/column' {
-  namespace Column {
-    interface Data {
-      // SQL computed columns have an Expression in their data, which will be used for building SQL.
-      computed?: Expression;
-    }
-  }
+export interface ColumnDataComputedProp {
+  // SQL computed columns have an Expression in their data, which will be used for building SQL.
+  computed?: Expression;
 }
 
 export type ComputedColumnsFromOptions<

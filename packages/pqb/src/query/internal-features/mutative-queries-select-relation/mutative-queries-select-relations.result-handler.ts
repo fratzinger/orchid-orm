@@ -12,7 +12,7 @@ import {
   SelectItem,
 } from '../../basic-features/select/select.sql';
 import { maybeWrappedThen } from '../../then/then';
-import { Adapter } from 'pqb/internal';
+import { Adapter } from '../../../adapters/adapter';
 
 export const checkIfNeedResultAllForMutativeQueriesSelectRelations = (
   sql: MutativeQueriesSelectRelationsSqlProp,

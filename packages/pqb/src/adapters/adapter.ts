@@ -4,7 +4,7 @@ import {
   RecordStringOrNumber,
   RecordUnknown,
 } from '../utils';
-import { setTimeout } from 'timers/promises';
+import { setTimeout } from 'node:timers/promises';
 import { QueryError } from '../query/errors';
 import { Query, QuerySchema } from '../query';
 import {

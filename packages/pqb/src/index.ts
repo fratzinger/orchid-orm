@@ -348,6 +348,7 @@ export {
   makeConnectRetryConfig,
   wrapAdapterFnWithConnectRetry,
   type Adapter,
+  type DriverAdapter,
   type AdapterParams,
   type AdapterConfigBase,
   type QueryResult,

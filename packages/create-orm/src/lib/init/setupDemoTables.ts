@@ -1,6 +1,6 @@
 import { InitConfig } from '../../lib';
-import { join } from 'path';
-import fs from 'fs/promises';
+import { join } from 'node:path';
+import fs from 'node:fs/promises';
 
 export async function setupDemoTables(config: InitConfig): Promise<void> {
   if (!config.demoTables) return;

@@ -11,9 +11,11 @@ import {
   DefaultSchemaConfig,
   DbResult,
   ColumnSchemaConfig,
+  AdapterClass,
+  DriverAdapter,
+  QuerySchema,
 } from 'pqb/internal';
-import { createDbWithAdapter, QuerySchema } from 'pqb';
-import { AdapterClass, DriverAdapter } from './adapter';
+import { createDbWithAdapter } from 'pqb';
 
 export interface CreatePostgresJsDbOptions<
   SchemaConfig extends ColumnSchemaConfig,

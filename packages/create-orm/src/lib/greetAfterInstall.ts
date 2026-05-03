@@ -1,4 +1,4 @@
-import { relative } from 'path';
+import { relative } from 'node:path';
 import { InitConfig } from '../lib';
 import { getPackageManagerName } from './utils';
 

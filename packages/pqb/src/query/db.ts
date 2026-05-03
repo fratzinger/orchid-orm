@@ -58,6 +58,7 @@ import {
   applyMixins,
   emptyObject,
   EmptyObject,
+  MaybeArray,
   pushOrNewArray,
   RecordString,
   RecordUnknown,
@@ -66,7 +67,6 @@ import {
 import { Adapter, QueryArraysResult } from '../adapters/adapter';
 import { NotFoundError, QueryError, QueryErrorName } from './errors';
 import { ColumnsParsers } from './query-columns/query-column-parsers';
-import { MaybeArray } from 'rollup';
 import { DynamicSQLArg, StaticSQLArgs } from './expressions/expression';
 import { logParamToLogObject, QueryLogOptions } from './basic-features/log/log';
 import {

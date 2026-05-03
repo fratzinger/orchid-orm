@@ -44,6 +44,7 @@ import {
   snakeCaseKey,
   toSnakeCase,
   ColumnsShape,
+  QuerySchema,
 } from 'pqb/internal';
 import {
   RelationConfigSelf,
@@ -69,7 +70,7 @@ import {
   HasAndBelongsToManyQuery,
 } from './relations/hasAndBelongsToMany';
 import { HasMany, HasManyInfo, HasManyQuery } from './relations/hasMany';
-import { Db, Query, QuerySchema } from 'pqb';
+import { Db, Query } from 'pqb';
 
 // type of table class itself
 export interface TableClass<T extends ORMTableInput = ORMTableInput> {

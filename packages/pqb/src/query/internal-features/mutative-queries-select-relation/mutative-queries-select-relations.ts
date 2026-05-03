@@ -8,7 +8,7 @@ import {
   useTestDatabase,
 } from 'test-utils';
 import { MAX_BINDING_PARAMS } from '../../sql/sql-constants';
-import { NotFoundError } from 'pqb';
+import { NotFoundError } from '../../errors';
 
 jest.mock('../../sql/sql-constants', () => ({
   // Behold the power of JS coercions

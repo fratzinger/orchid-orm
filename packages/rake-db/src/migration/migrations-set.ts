@@ -1,4 +1,4 @@
-import path from 'path';
+import path from 'node:path';
 import {
   RakeDbConfig,
   RakeDbRenameMigrations,
@@ -6,10 +6,10 @@ import {
 } from '../config';
 import { MaybePromise, RecordString } from 'pqb/internal';
 import { pathToFileURL } from 'node:url';
-import { readdir } from 'fs/promises';
+import { readdir } from 'node:fs/promises';
 import { RakeDbCtx } from '../common';
 import { fileNamesToChangeMigrationIdMap } from '../commands/change-ids';
-import fs from 'fs/promises';
+import fs from 'node:fs/promises';
 import { MigrateConfigInternal } from '../commands/migrate-or-rollback';
 
 export interface MigrationItemHasLoad {

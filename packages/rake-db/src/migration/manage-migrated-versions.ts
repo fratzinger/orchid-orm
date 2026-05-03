@@ -8,7 +8,7 @@ import {
   RecordUnknown,
 } from 'pqb/internal';
 import { RakeDbConfig, RakeDbRenameMigrations } from '../config';
-import path from 'path';
+import path from 'node:path';
 import {
   getDigitsPrefix,
   getMigrations,

@@ -1,5 +1,5 @@
 import { QueryData } from '../../query-data';
-import { queryTypeWithLimitOne } from '../../index';
+import { queryTypeWithLimitOne } from '../../query';
 import { addValue } from '../../../utils';
 import { SubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
 import { ToSQLCtx } from '../../sql/to-sql';

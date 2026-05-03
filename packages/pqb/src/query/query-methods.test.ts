@@ -805,7 +805,7 @@ describe('queryMethods', () => {
 
   describe('makeHelper', () => {
     it('should make a query helper', () => {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      //
       const fn = User.makeHelper((q, _: boolean) => q.select('id'));
       const q = fn(User.select('name'), true);
 

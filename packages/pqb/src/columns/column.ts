@@ -14,6 +14,7 @@ import { Code, ColumnToCodeCtx } from './code';
 import { Operator } from './operators';
 import { PickQueryInputType, PickQueryShape } from '../query/pick-query-types';
 import { QueryHookUtils } from '../query/extra-features/hooks/hooks';
+import { ColumnDataComputedProp } from '../query';
 
 export namespace Column {
   export namespace Modifiers {
@@ -214,7 +215,7 @@ export namespace Column {
     }
 
     // Use a lightweight column type across the query builder, this helps TS significantly.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    //
     export interface QueryColumn extends OutputType {
       dataType: string;
       type: unknown;
@@ -361,7 +362,7 @@ export namespace Column {
   }
 
   // type of data for ColumnType
-  export interface Data {
+  export interface Data extends ColumnDataComputedProp {
     // column key is assigned when instantiating a table interface
     key: string;
 

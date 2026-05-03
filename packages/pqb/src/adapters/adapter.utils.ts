@@ -1,5 +1,5 @@
 import { AdapterTransactionOptions } from './adapter';
-import { RecordStringOrNumber } from 'pqb/internal';
+import { RecordStringOrNumber } from '../utils';
 
 export const mergeLocals = (
   locals: RecordStringOrNumber,

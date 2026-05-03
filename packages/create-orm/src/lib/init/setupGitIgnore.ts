@@ -1,7 +1,7 @@
 import { InitConfig } from '../../lib';
-import { join } from 'path';
+import { join } from 'node:path';
 import { readFileSafe } from '../utils';
-import fs from 'fs/promises';
+import fs from 'node:fs/promises';
 
 export async function setupGitIgnore(config: InitConfig): Promise<void> {
   const gitignorePath = join(config.path, '.gitignore');

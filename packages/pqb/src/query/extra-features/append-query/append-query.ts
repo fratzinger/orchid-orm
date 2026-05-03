@@ -1,5 +1,6 @@
-import { prepareSubQueryForSql, pushQueryValueImmutable } from 'pqb/internal';
-import { Query } from 'pqb';
+import { prepareSubQueryForSql } from '../../internal-features/sub-query/sub-query-for-sql';
+import { pushQueryValueImmutable } from '../../query-data';
+import { Query } from '../../query';
 
 export const _appendQuery = (
   main: Query,

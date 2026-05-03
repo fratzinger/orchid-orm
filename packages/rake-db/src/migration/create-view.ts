@@ -1,9 +1,14 @@
 import { Migration } from './migration';
-import { singleQuote, raw, SingleSql, RawSqlBase } from 'pqb/internal';
+import {
+  singleQuote,
+  raw,
+  SingleSql,
+  RawSqlBase,
+  QuerySchema,
+} from 'pqb/internal';
 import { RakeDbAst } from '../ast';
 import { interpolateSqlValues } from './migration.utils';
 import { getSchemaAndTableFromName } from '../common';
-import { QuerySchema } from 'pqb';
 
 export const createView = async (
   migration: Migration,

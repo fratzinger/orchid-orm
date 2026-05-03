@@ -1,6 +1,6 @@
 import { InitConfig } from '../../lib';
-import { join } from 'path';
-import fs from 'fs/promises';
+import { join } from 'node:path';
+import fs from 'node:fs/promises';
 
 export async function setupMigrationScript(config: InitConfig): Promise<void> {
   const filePath = join(config.dbDirPath, 'db-script.ts');

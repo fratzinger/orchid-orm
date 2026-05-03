@@ -1,6 +1,6 @@
-import fs from 'fs/promises';
+import fs from 'node:fs/promises';
 import { initSteps } from '../init';
-import { resolve } from 'path';
+import { resolve } from 'node:path';
 import { mockFn, testInitConfig } from '../../testUtils';
 
 const seedPath = resolve(testInitConfig.dbDirPath, 'seed.ts');

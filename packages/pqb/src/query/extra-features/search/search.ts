@@ -41,85 +41,82 @@ interface HeadlineParams<T extends PickQuerySelectable> {
   options?: string | Expression;
 }
 
-// define a `headline` method on a query builder
-declare module '../../basic-features/aggregate/aggregate' {
-  interface AggregateMethods {
-    /**
-     * Give the `as` alias for the search, and it becomes possible to select a text with highlights of the matching words or phrases:
-     *
-     * ```ts
-     * db.table
-     *   .search({
-     *     as: 'search',
-     *     in: 'body',
-     *     query: 'query',
-     *   })
-     *   .select({
-     *     highlightedText: (q) => q.headline('search'),
-     *   });
-     * ```
-     *
-     * When searching in the generated `tsvector` column, need to provide a text source to the `headline`:
-     *
-     * ```ts
-     * db.table
-     *   .search({
-     *     as: 'search',
-     *     vector: 'textVector',
-     *     query: 'query',
-     *   })
-     *   .select({
-     *     // `body` is a column name
-     *     highlightedText: (q) => q.headline('search', { text: 'body' }),
-     *   });
-     * ```
-     *
-     * `text` can be a raw SQL, here we are joining multiple columns:
-     *
-     * ```ts
-     * import { raw } from 'orchid-orm';
-     *
-     * db.table
-     *   .search({
-     *     as: 'search',
-     *     vector: 'titleAndBodyVector',
-     *     query: 'query',
-     *   })
-     *   .select({
-     *     highlightedText: (q) =>
-     *       q.headline('search', { text: raw`concat_ws(' ', title, body)` }),
-     *   });
-     * ```
-     *
-     * `headline` supports a string for `options`, see details [in Postgres doc](https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE).
-     *
-     * Provide a simple string or a raw SQL:
-     *
-     * ```ts
-     * db.table
-     *   .search({
-     *     as: 'search',
-     *     in: 'body',
-     *     query: 'query',
-     *   })
-     *   .select({
-     *     highlightedText: (q) =>
-     *       q.headline('search', {
-     *         options:
-     *           'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<, StopSel=>>',
-     *       }),
-     *   });
-     * ```
-     *
-     * @param search - name of the search to use the query from
-     * @param options - `text` for a text source, `options` for `ts_headline` options
-     */
-    headline<T extends Order.ArgThis>(
-      this: T,
-      search: HeadlineSearchArg<T>,
-      options?: HeadlineParams<T>,
-    ): SetQueryReturnsColumnOrThrow<T, Column.Pick.QueryColumnOfType<string>>;
-  }
+export interface SearchAggregateMethods {
+  /**
+   * Give the `as` alias for the search, and it becomes possible to select a text with highlights of the matching words or phrases:
+   *
+   * ```ts
+   * db.table
+   *   .search({
+   *     as: 'search',
+   *     in: 'body',
+   *     query: 'query',
+   *   })
+   *   .select({
+   *     highlightedText: (q) => q.headline('search'),
+   *   });
+   * ```
+   *
+   * When searching in the generated `tsvector` column, need to provide a text source to the `headline`:
+   *
+   * ```ts
+   * db.table
+   *   .search({
+   *     as: 'search',
+   *     vector: 'textVector',
+   *     query: 'query',
+   *   })
+   *   .select({
+   *     // `body` is a column name
+   *     highlightedText: (q) => q.headline('search', { text: 'body' }),
+   *   });
+   * ```
+   *
+   * `text` can be a raw SQL, here we are joining multiple columns:
+   *
+   * ```ts
+   * import { raw } from 'orchid-orm';
+   *
+   * db.table
+   *   .search({
+   *     as: 'search',
+   *     vector: 'titleAndBodyVector',
+   *     query: 'query',
+   *   })
+   *   .select({
+   *     highlightedText: (q) =>
+   *       q.headline('search', { text: raw`concat_ws(' ', title, body)` }),
+   *   });
+   * ```
+   *
+   * `headline` supports a string for `options`, see details [in Postgres doc](https://www.postgresql.org/docs/current/textsearch-controls.html#TEXTSEARCH-HEADLINE).
+   *
+   * Provide a simple string or a raw SQL:
+   *
+   * ```ts
+   * db.table
+   *   .search({
+   *     as: 'search',
+   *     in: 'body',
+   *     query: 'query',
+   *   })
+   *   .select({
+   *     highlightedText: (q) =>
+   *       q.headline('search', {
+   *         options:
+   *           'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<, StopSel=>>',
+   *       }),
+   *   });
+   * ```
+   *
+   * @param search - name of the search to use the query from
+   * @param options - `text` for a text source, `options` for `ts_headline` options
+   */
+  headline<T extends Order.ArgThis>(
+    this: T,
+    search: HeadlineSearchArg<T>,
+    options?: HeadlineParams<T>,
+  ): SetQueryReturnsColumnOrThrow<T, Column.Pick.QueryColumnOfType<string>>;
 }
 
 // type of `search` argument

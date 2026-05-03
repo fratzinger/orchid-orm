@@ -1,9 +1,9 @@
 import prompts from 'prompts';
-import fs from 'fs/promises';
+import fs from 'node:fs/promises';
 import { asMock, mockFn } from '../testUtils';
 import { UserProvidedConfig } from '../lib';
 import { getConfig } from './getConfig';
-import { resolve } from 'path';
+import { resolve } from 'node:path';
 
 jest.mock('prompts', () => jest.fn());
 

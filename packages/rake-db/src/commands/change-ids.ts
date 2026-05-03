@@ -1,6 +1,6 @@
 import { RakeDbConfig } from '../config';
-import path from 'path';
-import fs from 'fs/promises';
+import path from 'node:path';
+import fs from 'node:fs/promises';
 import { generateTimeStamp } from './new-migration';
 import { getMigrations } from '../migration/migrations-set';
 import { Adapter } from 'pqb/internal';

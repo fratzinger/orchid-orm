@@ -26,39 +26,74 @@
   "typings": "dist/index.d.ts",
   "exports": {
     ".": {
-      "require": "./dist/index.js",
-      "import": "./dist/index.mjs",
-      "types": "./dist/index.d.ts"
+      "require": {
+        "default": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      },
+      "import": {
+        "default": "./dist/index.mjs",
+        "types": "./dist/index.d.ts"
+      }
     },
     "./codegen": {
-      "require": "./codegen/index.js",
-      "import": "./codegen/index.mjs",
-      "types": "./codegen/index.d.ts"
+      "require": {
+        "default": "./codegen/index.js",
+        "types": "./codegen/index.d.ts"
+      },
+      "import": {
+        "default": "./codegen/index.mjs",
+        "types": "./codegen/index.d.ts"
+      }
     },
     "./node-postgres": {
-      "require": "./dist/node-postgres.js",
-      "import": "./dist/node-postgres.mjs",
-      "types": "./dist/node-postgres.d.ts"
+      "require": {
+        "default": "./dist/node-postgres.js",
+        "types": "./dist/node-postgres.d.ts"
+      },
+      "import": {
+        "default": "./dist/node-postgres.mjs",
+        "types": "./dist/node-postgres.d.ts"
+      }
     },
     "./postgres-js": {
-      "require": "./dist/postgres-js.js",
-      "import": "./dist/postgres-js.mjs",
-      "types": "./dist/postgres-js.d.ts"
+      "require": {
+        "default": "./dist/postgres-js.js",
+        "types": "./dist/postgres-js.d.ts"
+      },
+      "import": {
+        "default": "./dist/postgres-js.mjs",
+        "types": "./dist/postgres-js.d.ts"
+      }
     },
     "./migrations": {
-      "require": "./dist/migrations/index.js",
-      "import": "./dist/migrations/index.mjs",
-      "types": "./dist/migrations/index.d.ts"
+      "require": {
+        "default": "./dist/migrations/index.js",
+        "types": "./dist/migrations/index.d.ts"
+      },
+      "import": {
+        "default": "./dist/migrations/index.mjs",
+        "types": "./dist/migrations/index.d.ts"
+      }
     },
     "./migrations/node-postgres": {
-      "require": "./dist/migrations/node-postgres.js",
-      "import": "./dist/migrations/node-postgres.mjs",
-      "types": "./dist/migrations/node-postgres.d.ts"
+      "require": {
+        "default": "./dist/migrations/node-postgres.js",
+        "types": "./dist/migrations/node-postgres.d.ts"
+      },
+      "import": {
+        "default": "./dist/migrations/node-postgres.mjs",
+        "types": "./dist/migrations/node-postgres.d.ts"
+      }
     },
     "./migrations/postgres-js": {
-      "require": "./dist/migrations/postgres-js.js",
-      "import": "./dist/migrations/postgres-js.mjs",
-      "types": "./dist/migrations/postgres-js.d.ts"
+      "require": {
+        "default": "./dist/migrations/postgres-js.js",
+        "types": "./dist/migrations/postgres-js.d.ts"
+      },
+      "import": {
+        "default": "./dist/migrations/postgres-js.mjs",
+        "types": "./dist/migrations/postgres-js.d.ts"
+      }
     }
   },
   "scripts": {
@@ -66,7 +101,7 @@
     "check": "jest",
     "types": "tsc",
     "test:ci": "jest --coverage --coverageReporters json-summary",
-    "build": "rm -rf ./dist/ ./codegen/ && rollup -c ./rollup.config.mjs",
+    "build": "rimraf ./dist/ ./codegen/ && rolldown -c ./rolldown.config.mjs",
     "lint": "oxlint --fix",
     "lint:check": "oxlint",
     "fmt": "oxfmt",
@@ -83,7 +118,7 @@
     "@types/prompts": "2.4.2",
     "orchid-orm-schema-to-zod": "workspace:*",
     "test-utils": "workspace:*",
-    "zod": "^4.3.6"
+    "zod": "4.3.6"
   },
   "peerDependencies": {
     "typescript": "*"

@@ -1,9 +1,9 @@
-import fs from 'fs/promises';
+import fs from 'node:fs/promises';
 import { initSteps } from '../init';
-import { join } from 'path';
+import { join } from 'node:path';
 import { EnoentError, mockFn, testInitConfig } from '../../testUtils';
 
-jest.mock('https', () => ({
+jest.mock('node:https', () => ({
   get(
     _: string,
     cb: (res: {
@@ -27,20 +27,20 @@ const packageJSONPath = join(testInitConfig.path, 'package.json');
 const readFile = mockFn(fs, 'readFile');
 const writeFile = mockFn(fs, 'writeFile');
 
-const dependencies = `"dotenv": "^1.2.3",
-    "orchid-orm": "^1.2.3",
-    "postgres": "^1.2.3"`;
+const dependencies = `"dotenv": "1.2.3",
+    "orchid-orm": "1.2.3",
+    "postgres": "1.2.3"`;
 
-const devDependencies = `"@types/node": "^1.2.3",
-    "typescript": "^1.2.3"`;
+const devDependencies = `"@types/node": "1.2.3",
+    "typescript": "1.2.3"`;
 
 const tsxScripts = `"db": "NODE_ENV=development tsx src/db/db-script.ts",
     "build:migrations": "rimraf dist/db && node esbuild.migrations.mjs",
     "db:compiled": "NODE_ENV=production node dist/db/db-script.mjs"`;
 
 const tsxDeps = `"tsx": "4.9.0",
-    "esbuild": "^1.2.3",
-    "rimraf": "^1.2.3"`;
+    "esbuild": "1.2.3",
+    "rimraf": "1.2.3"`;
 
 describe('setupPackageJSON', () => {
   beforeEach(jest.resetAllMocks);
@@ -60,8 +60,8 @@ describe('setupPackageJSON', () => {
     ${dependencies}
   },
   "devDependencies": {
-    "@types/node": "^1.2.3",
-    "typescript": "^1.2.3",
+    "@types/node": "1.2.3",
+    "typescript": "1.2.3",
     ${tsxDeps}
   }
 }
@@ -99,15 +99,15 @@ describe('setupPackageJSON', () => {
     ${dependencies},
     ${
       validation === 'zod'
-        ? '"orchid-orm-schema-to-zod": "^1.2.3"'
-        : `"orchid-orm-valibot": "^1.2.3",
-    "valibot": "^1.2.3"`
+        ? '"orchid-orm-schema-to-zod": "1.2.3"'
+        : `"orchid-orm-valibot": "1.2.3",
+    "valibot": "1.2.3"`
     }
   },
   "devDependencies": {
-    "orchid-orm-test-factory": "^1.2.3",
-    "@types/node": "^1.2.3",
-    "typescript": "^1.2.3",
+    "orchid-orm-test-factory": "1.2.3",
+    "@types/node": "1.2.3",
+    "typescript": "1.2.3",
     ${tsxDeps}
   }
 }
@@ -148,21 +148,21 @@ describe('setupPackageJSON', () => {
   },
   "dependencies": {
     "ko": "ko",
-    "dotenv": "^1.2.3",
-    "orchid-orm": "^1.2.3",
-    "postgres": "^1.2.3",
+    "dotenv": "1.2.3",
+    "orchid-orm": "1.2.3",
+    "postgres": "1.2.3",
     ${
       validation === 'zod'
-        ? '"orchid-orm-schema-to-zod": "^1.2.3"'
-        : `"orchid-orm-valibot": "^1.2.3",
-    "valibot": "^1.2.3"`
+        ? '"orchid-orm-schema-to-zod": "1.2.3"'
+        : `"orchid-orm-valibot": "1.2.3",
+    "valibot": "1.2.3"`
     }
   },
   "devDependencies": {
     "ko": "ko",
-    "orchid-orm-test-factory": "^1.2.3",
-    "@types/node": "^1.2.3",
-    "typescript": "^1.2.3",
+    "orchid-orm-test-factory": "1.2.3",
+    "@types/node": "1.2.3",
+    "typescript": "1.2.3",
     ${tsxDeps}
   }
 }
@@ -219,9 +219,9 @@ describe('setupPackageJSON', () => {
   },
   "devDependencies": {
     ${devDependencies},
-    "vite": "^1.2.3",
-    "vite-node": "^1.2.3",
-    "rollup-plugin-node-externals": "^1.2.3"
+    "vite": "1.2.3",
+    "vite-node": "1.2.3",
+    "rollup-plugin-node-externals": "1.2.3"
   }
 }
 `);
@@ -273,7 +273,7 @@ describe('setupPackageJSON', () => {
   },
   "devDependencies": {
     ${devDependencies},
-    "ts-node": "^1.2.3"
+    "ts-node": "1.2.3"
   }
 }
 `);

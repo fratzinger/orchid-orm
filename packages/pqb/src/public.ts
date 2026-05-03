@@ -12,5 +12,4 @@ export {
   Db,
   type Query,
   type QueryHelperResult,
-  type QuerySchema,
 } from './index';

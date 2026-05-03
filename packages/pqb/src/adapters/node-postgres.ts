@@ -11,9 +11,11 @@ import {
   DefaultSchemaConfig,
   DbOptions,
   DbResult,
+  QuerySchema,
+  AdapterClass,
+  DriverAdapter,
 } from 'pqb/internal';
-import { createDbWithAdapter, QuerySchema } from 'pqb';
-import { AdapterClass as RuntimeAdapter, DriverAdapter } from './adapter';
+import { createDbWithAdapter } from 'pqb';
 
 export const createDb = <
   SchemaConfig extends ColumnSchemaConfig = DefaultSchemaConfig,
@@ -26,7 +28,7 @@ export const createDb = <
   return createDbWithAdapter({
     ...options,
     log,
-    adapter: new RuntimeAdapter({
+    adapter: new AdapterClass({
       driverAdapter: NodePostgresAdapter,
       config: options,
     }),

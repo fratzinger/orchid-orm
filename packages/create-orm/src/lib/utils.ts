@@ -1,6 +1,6 @@
-import fs from 'fs/promises';
-import { basename } from 'path';
-import https from 'https';
+import fs from 'node:fs/promises';
+import { basename } from 'node:path';
+import https from 'node:https';
 
 export async function readFileSafe(path: string) {
   try {
@@ -24,7 +24,7 @@ export function getLatestPackageVersion(
         let data = '';
         res.on('data', (chunk) => (data += chunk));
         res.on('end', () =>
-          resolve([name, { version: `^${JSON.parse(data).version}`, kind }]),
+          resolve([name, { version: JSON.parse(data).version, kind }]),
         );
       })
       .on('error', reject);

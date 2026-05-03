@@ -1,6 +1,6 @@
 import { InitConfig } from '../../lib';
-import { join } from 'path';
-import fs from 'fs/promises';
+import { join } from 'node:path';
+import fs from 'node:fs/promises';
 
 export async function setupConfig(config: InitConfig): Promise<void> {
   const configPath = join(config.dbDirPath, 'config.ts');

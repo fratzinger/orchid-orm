@@ -1,4 +1,4 @@
-import fs from 'fs/promises';
+import fs from 'node:fs/promises';
 import { init } from '../lib';
 import { initSteps } from './init';
 import { mockFn, testInitConfig } from '../testUtils';

@@ -1,5 +1,5 @@
 import { InitConfig } from '../lib';
-import fs from 'fs/promises';
+import fs from 'node:fs/promises';
 import { setupPackageJSON } from './init/setupPackageJSON';
 import { setupTSConfig } from './init/setupTSConfig';
 import { setupEnv } from './init/setupEnv';

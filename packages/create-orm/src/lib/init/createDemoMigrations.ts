@@ -1,5 +1,5 @@
-import { join } from 'path';
-import fs from 'fs/promises';
+import { join } from 'node:path';
+import fs from 'node:fs/promises';
 import { InitConfig } from '../../lib';
 
 export async function createDemoMigrations(config: InitConfig): Promise<void> {

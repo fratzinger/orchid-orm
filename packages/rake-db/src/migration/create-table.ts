@@ -13,6 +13,7 @@ import {
   QueryArraysResult,
   RecordUnknown,
   snakeCaseKey,
+  QuerySchema,
 } from 'pqb/internal';
 import {
   ColumnComment,
@@ -42,7 +43,7 @@ import {
 import { RakeDbAst } from '../ast';
 import { tableMethods } from './table-methods';
 import { NoPrimaryKey } from '../errors';
-import { Db, QuerySchema } from 'pqb';
+import { Db } from 'pqb';
 
 export interface TableQuery {
   text: string;

@@ -19,9 +19,14 @@
   "typings": "dist/lib.d.ts",
   "exports": {
     ".": {
-      "require": "./dist/lib.js",
-      "import": "./dist/lib.mjs",
-      "types": "./dist/lib.d.ts"
+      "require": {
+        "default": "./dist/lib.js",
+        "types": "./dist/lib.d.ts"
+      },
+      "import": {
+        "default": "./dist/lib.mjs",
+        "types": "./dist/lib.d.ts"
+      }
     }
   },
   "scripts": {
@@ -29,7 +34,7 @@
     "check": "jest",
     "types": "tsc",
     "test:ci": "jest --coverage --coverageReporters json-summary",
-    "build": "rm -rf ./dist/ && rollup -c ./rollup.config.mjs",
+    "build": "rimraf ./dist/ && rolldown -c ./rolldown.config.mjs",
     "lint": "oxlint --fix",
     "lint:check": "oxlint",
     "fmt": "oxfmt",
@@ -40,7 +45,6 @@
     "prompts": "2.4.2"
   },
   "devDependencies": {
-    "@types/prompts": "2.4.2",
-    "rollup-plugin-executable": "1.6.3"
+    "@types/prompts": "2.4.2"
   }
 }

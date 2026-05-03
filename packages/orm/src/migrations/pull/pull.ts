@@ -8,7 +8,7 @@ import {
   SilentQueries,
   structureToAst,
 } from 'rake-db';
-import fs from 'fs/promises';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
   AppCodeGenTable,

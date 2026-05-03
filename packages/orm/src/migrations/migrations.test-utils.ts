@@ -6,7 +6,7 @@ import {
   QueryLogger,
 } from 'pqb/internal';
 import path from 'node:path';
-import { join } from 'path';
+import { join } from 'node:path';
 import { createBaseTable } from '../baseTable';
 import { testColumnTypes } from 'test-utils';
 

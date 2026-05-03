@@ -111,6 +111,7 @@ export { type HookSelectValue } from './index';
 export {
   getPrimaryKeys,
   getQuerySchema,
+  type QuerySchema,
   type CreateCtx,
   type CreateData,
   type CreateMethodsNames,
@@ -307,6 +308,7 @@ export {
   makeConnectRetryConfig,
   wrapAdapterFnWithConnectRetry,
   type Adapter,
+  type DriverAdapter,
   type AdapterParams,
   type AdapterConfigBase,
   type QueryResult,

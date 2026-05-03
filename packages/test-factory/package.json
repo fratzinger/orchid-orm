@@ -23,9 +23,14 @@
   "typings": "dist/index.d.ts",
   "exports": {
     ".": {
-      "require": "./dist/index.js",
-      "import": "./dist/index.mjs",
-      "types": "./dist/index.d.ts"
+      "require": {
+        "default": "./dist/index.js",
+        "types": "./dist/index.d.ts"
+      },
+      "import": {
+        "default": "./dist/index.mjs",
+        "types": "./dist/index.d.ts"
+      }
     }
   },
   "scripts": {
@@ -33,7 +38,7 @@
     "check": "jest",
     "types": "tsc",
     "test:ci": "jest --coverage --coverageReporters json-summary",
-    "build": "rm -rf ./dist/ && rollup -c ../../rollup.config.mjs",
+    "build": "rimraf ./dist/ && rolldown -c ../../rolldown.config.mjs",
     "lint": "oxlint --fix",
     "lint:check": "oxlint",
     "fmt": "oxfmt",
@@ -47,7 +52,7 @@
   "devDependencies": {
     "orchid-orm": "workspace:*",
     "test-utils": "workspace:*",
-    "zod": "^4.3.6"
+    "zod": "4.3.6"
   },
   "peerDependencies": {
     "@faker-js/faker": "9.x"

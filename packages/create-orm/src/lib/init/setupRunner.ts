@@ -1,6 +1,6 @@
 import { InitConfig } from '../../lib';
-import fs from 'fs/promises';
-import { join } from 'path';
+import fs from 'node:fs/promises';
+import { join } from 'node:path';
 
 export async function setupRunner(config: InitConfig): Promise<void> {
   if (config.runner === 'vite-node') {

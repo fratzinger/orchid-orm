@@ -4,8 +4,8 @@ import {
   getLatestPackageVersion,
   readFileSafe,
 } from '../utils';
-import { join } from 'path';
-import fs from 'fs/promises';
+import { join } from 'node:path';
+import fs from 'node:fs/promises';
 
 export async function setupPackageJSON(config: InitConfig): Promise<void> {
   const pairs = await Promise.all([

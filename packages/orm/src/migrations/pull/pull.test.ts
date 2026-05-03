@@ -10,11 +10,11 @@ import {
 } from 'pqb/internal';
 import { testConfig } from '../migrations.test-utils';
 import { ChangeCallback, createMigrationInterface } from 'rake-db';
-import fs from 'fs/promises';
+import fs from 'node:fs/promises';
 import { asMock, TestAdapter } from 'test-utils';
 import path from 'node:path';
 
-jest.mock('fs/promises', () => ({
+jest.mock('node:fs/promises', () => ({
   readFile: jest.fn(),
   writeFile: jest.fn(() => Promise.resolve()),
   mkdir: jest.fn(),

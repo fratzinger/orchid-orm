@@ -1,12 +1,12 @@
 import { newMigration } from './new-migration';
-import { mkdir, writeFile } from 'fs/promises';
-import path from 'path';
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import { pathToLog } from 'pqb/internal';
 import { testConfig } from '../rake-db.test-utils';
 import { asMock } from 'test-utils';
-import fs from 'fs/promises';
+import fs from 'node:fs/promises';
 
-jest.mock('fs/promises');
+jest.mock('node:fs/promises');
 
 const migrationsPath = '/migrations-path';
 const config = {

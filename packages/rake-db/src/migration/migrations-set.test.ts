@@ -1,10 +1,10 @@
-import { readdir } from 'fs/promises';
-import path from 'path';
+import { readdir } from 'node:fs/promises';
+import path from 'node:path';
 import { getMigrations, sortMigrationsAsc } from './migrations-set';
 import { testConfig } from '../rake-db.test-utils';
 import { asMock } from 'test-utils';
 
-jest.mock('fs/promises', () => ({
+jest.mock('node:fs/promises', () => ({
   readdir: jest.fn(),
 }));
 

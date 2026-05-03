@@ -3,7 +3,7 @@ import {
   RelationData,
   RelationThunkBase,
 } from './relations';
-import { NotFoundError, OrchidOrmInternalError, Query, QuerySchema } from 'pqb';
+import { NotFoundError, OrchidOrmInternalError, Query } from 'pqb';
 import { ORMTableInput } from '../baseTable';
 import {
   _queryCreateManyFrom,
@@ -43,6 +43,7 @@ import {
   defaultSchemaConfig,
   Column,
   QueryHasWhere,
+  QuerySchema,
 } from 'pqb/internal';
 import {
   addAutoForeignKey,

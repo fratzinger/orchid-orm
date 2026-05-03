@@ -1,5 +1,5 @@
 import { RakeDbCtx } from '../common';
-import path from 'path';
+import path from 'node:path';
 import { getMigratedVersionsMap } from '../migration/manage-migrated-versions';
 import { pathToFileURL } from 'node:url';
 import { RakeDbConfig } from '../config';

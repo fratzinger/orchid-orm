@@ -23,24 +23,44 @@
   "typings": "dist/public.d.ts",
   "exports": {
     ".": {
-      "require": "./dist/public.js",
-      "import": "./dist/public.mjs",
-      "types": "./dist/public.d.ts"
+      "require": {
+        "default": "./dist/public.js",
+        "types": "./dist/public.d.ts"
+      },
+      "import": {
+        "default": "./dist/public.mjs",
+        "types": "./dist/public.d.ts"
+      }
     },
     "./internal": {
-      "require": "./dist/internal.js",
-      "import": "./dist/internal.mjs",
-      "types": "./dist/internal.d.ts"
+      "require": {
+        "default": "./dist/internal.js",
+        "types": "./dist/internal.d.ts"
+      },
+      "import": {
+        "default": "./dist/internal.mjs",
+        "types": "./dist/internal.d.ts"
+      }
     },
     "./node-postgres": {
-      "require": "./dist/node-postgres.js",
-      "import": "./dist/node-postgres.mjs",
-      "types": "./dist/node-postgres.d.ts"
+      "require": {
+        "default": "./dist/node-postgres.js",
+        "types": "./dist/node-postgres.d.ts"
+      },
+      "import": {
+        "default": "./dist/node-postgres.mjs",
+        "types": "./dist/node-postgres.d.ts"
+      }
     },
     "./postgres-js": {
-      "require": "./dist/postgres-js.js",
-      "import": "./dist/postgres-js.mjs",
-      "types": "./dist/postgres-js.d.ts"
+      "require": {
+        "default": "./dist/postgres-js.js",
+        "types": "./dist/postgres-js.d.ts"
+      },
+      "import": {
+        "default": "./dist/postgres-js.mjs",
+        "types": "./dist/postgres-js.d.ts"
+      }
     }
   },
   "scripts": {
@@ -48,7 +68,7 @@
     "check": "jest",
     "types": "tsc",
     "test:ci": "jest --coverage --coverageReporters json-summary",
-    "build": "rm -rf ./dist/ && rollup -c ./rollup.config.mjs",
+    "build": "rimraf ./dist/ && rolldown -c ./rolldown.config.mjs",
     "lint": "oxlint --fix",
     "lint:check": "oxlint",
     "fmt": "oxfmt",
@@ -60,7 +80,7 @@
   },
   "devDependencies": {
     "test-utils": "workspace:*",
-    "zod": "^4.3.6"
+    "zod": "4.3.6"
   },
   "peerDependencies": {
     "pg": ">=8",

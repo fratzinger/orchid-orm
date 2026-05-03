@@ -15,7 +15,7 @@ jest.mock('rake-db', () => {
   };
 });
 jest.mock('./verify-migration');
-jest.mock('fs/promises', () => ({
+jest.mock('node:fs/promises', () => ({
   readdir: jest.fn(() => Promise.resolve([])),
   mkdir: jest.fn(() => Promise.resolve()),
   writeFile: jest.fn(() => Promise.resolve()),

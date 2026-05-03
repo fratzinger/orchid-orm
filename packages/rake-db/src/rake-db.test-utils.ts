@@ -10,7 +10,7 @@ import {
   QueryLogger,
   toArray,
 } from 'pqb/internal';
-import { join } from 'path';
+import { join } from 'node:path';
 import { rakeDbConfigDefaults, RakeDbConfig } from './config';
 
 let db: DbMigration<DefaultColumnTypes<DefaultSchemaConfig>> | undefined;

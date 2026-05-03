@@ -3,13 +3,13 @@ import { testConfig } from '../rake-db.test-utils';
 import { RakeDbConfig, RakeDbMigrationId } from '../config';
 import { getMigrations } from '../migration/migrations-set';
 import { asMock, TestAdapter } from 'test-utils';
-import fs from 'fs/promises';
-import path from 'path';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { generateTimeStamp } from './new-migration';
 import { AdapterClass, QueryLogger } from 'pqb/internal';
 
 jest.mock('../migration/migrations-set');
-jest.mock('fs/promises');
+jest.mock('node:fs/promises');
 jest.mock('./new-migration');
 
 const options = [

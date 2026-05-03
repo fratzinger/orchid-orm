@@ -47,6 +47,7 @@ import {
 } from '../../pick-query-types';
 import { emptyArray } from '../../../utils';
 import { _clone } from '../clone/clone';
+import { SearchAggregateMethods } from '../../extra-features/search/search';
 
 // Helper function to check if we're selecting a count on this query.
 // Used in `create` to not return a full record after `count()` method.
@@ -266,6 +267,8 @@ export interface AggregateArgTypes {
   bool: 'bool';
   stringAgg: 'bytea' | 'text';
 }
+
+export interface AggregateMethods extends SearchAggregateMethods {}
 
 // Query methods to get a single value for an aggregate function
 export class AggregateMethods {
