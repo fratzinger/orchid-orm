@@ -369,7 +369,7 @@ export const _queryWhereNotExists = (q: Query, arg: unknown, args: unknown) => {
 export const _queryWhereOneOf = <T extends PickQuerySelectableRelations>(
   q: T,
   args: WhereArgs<T>,
-): T => {
+): T & QueryHasWhere => {
   resolveCallbacksInArgs(q, args);
 
   return pushQueryValueImmutable(q as never, 'and', {
@@ -993,7 +993,7 @@ export class Where {
   whereOneOf<T extends PickQuerySelectableRelations>(
     this: T,
     ...args: WhereArgs<T>
-  ): T {
+  ): T & QueryHasWhere {
     return _queryWhereOneOf(_clone(this), args as never) as never;
   }
 

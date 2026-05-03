@@ -165,6 +165,16 @@ describe('whereOneOf', () => {
       [1],
     );
   });
+
+  it('should allow update after whereOneOf', () => {
+    User.whereOneOf({ id: 1 }).update({
+      name: 'name',
+    });
+  });
+
+  it('should allow delete after whereOneOf', () => {
+    User.whereOneOf({ id: 1 }).delete();
+  });
 });
 
 describe('whereNotOneOf', () => {
