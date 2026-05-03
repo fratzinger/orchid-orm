@@ -1,5 +1,11 @@
 # create-orchid-orm
 
+## 0.4.5
+
+### Patch Changes
+
+- 57f06cf3: Fix create-orchid-orm packaging
+
 ## 0.4.4
 
 ### Patch Changes
