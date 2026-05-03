@@ -1,5 +1,12 @@
 # orchid-orm-schema-to-zod
 
+## 1.0.76
+
+### Patch Changes
+
+- Updated dependencies [2b4dc329]
+  - pqb@0.65.1
+
 ## 1.0.75
 
 ### Patch Changes

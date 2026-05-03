@@ -1,5 +1,11 @@
 # pqb
 
+## 0.65.1
+
+### Patch Changes
+
+- 2b4dc329: Fix `whereOneOf`: allow `update` and `delete` after `whereOneOf` (#689)
+
 ## 0.65.0
 
 ### Minor Changes
