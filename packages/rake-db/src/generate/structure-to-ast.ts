@@ -20,7 +20,7 @@ import {
   raw,
   RawSql,
   TableData,
-  AdapterBase,
+  Adapter,
   ColumnSchemaConfig,
   singleQuote,
   type TemplateLiteralArgs,
@@ -78,7 +78,7 @@ export const makeStructureToAstCtx = (
 
 export const structureToAst = async (
   ctx: StructureToAstCtx,
-  adapter: AdapterBase,
+  adapter: Adapter,
   config: Pick<RakeDbConfig, 'migrationsTable'>,
 ): Promise<RakeDbAst[]> => {
   const ast: RakeDbAst[] = [];

@@ -6,7 +6,7 @@ import { asMock, TestAdapter } from 'test-utils';
 import fs from 'fs/promises';
 import path from 'path';
 import { generateTimeStamp } from './new-migration';
-import { QueryLogger } from 'pqb/internal';
+import { AdapterClass, QueryLogger } from 'pqb/internal';
 
 jest.mock('../migration/migrations-set');
 jest.mock('fs/promises');
@@ -16,7 +16,9 @@ const options = [
   { databaseURL: 'postgres://user@localhost/dbname' },
   { databaseURL: 'postgres://user@localhost/dbname-test' },
 ];
-const adapters = options.map((opts) => new TestAdapter(opts));
+const adapters = options.map(
+  (config) => new AdapterClass({ driverAdapter: TestAdapter, config }),
+);
 
 let config = testConfig;
 
@@ -55,7 +57,7 @@ const act = (format: 'serial' | 'timestamp') =>
   changeIds(adapters, config, { format });
 
 const query = jest.fn();
-TestAdapter.prototype.arrays = query;
+AdapterClass.prototype.arrays = query;
 
 describe('changeIds', () => {
   beforeEach(jest.resetAllMocks);

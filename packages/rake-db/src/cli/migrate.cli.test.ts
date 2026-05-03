@@ -3,6 +3,7 @@ import { testConfig } from '../rake-db.test-utils';
 import { migrate } from 'rake-db';
 import { TestAdapter } from 'test-utils';
 import { redo, rollback } from '../commands/migrate-or-rollback';
+import { AdapterClass } from 'pqb/internal';
 
 jest.mock('../commands/migrate-or-rollback', () => ({
   migrate: jest.fn(),
@@ -10,7 +11,10 @@ jest.mock('../commands/migrate-or-rollback', () => ({
   redo: jest.fn(),
 }));
 
-const adapters = [new TestAdapter({}), new TestAdapter({})];
+const adapters = [
+  new AdapterClass({ driverAdapter: TestAdapter, config: {} }),
+  new AdapterClass({ driverAdapter: TestAdapter, config: {} }),
+];
 
 describe('migrate commands', () => {
   beforeEach(jest.clearAllMocks);

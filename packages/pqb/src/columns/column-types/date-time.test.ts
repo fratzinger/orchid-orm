@@ -33,7 +33,6 @@ const testTimestampInput = (column: Column.Pick.Data) => {
 
 describe('date time columns', () => {
   useTestDatabase();
-  afterAll(testDb.close);
 
   describe('date', () => {
     it('should output string', async () => {

@@ -1,4 +1,4 @@
-import { QueryInternal, AdapterBase } from 'pqb/internal';
+import { QueryInternal, Adapter } from 'pqb/internal';
 import {
   RakeDbAst,
   IntrospectedStructure,
@@ -38,7 +38,7 @@ export class PendingDbTypes {
 }
 
 export const composeMigration = async (
-  adapter: AdapterBase,
+  adapter: Adapter,
   config: RakeDbConfig,
   ast: RakeDbAst[],
   dbStructure: IntrospectedStructure,

@@ -1,12 +1,12 @@
-import { AdapterBase } from 'pqb/internal';
+import { Adapter } from 'pqb/internal';
 
 export interface OrmParam {
-  $getAdapter(): AdapterBase;
+  $getAdapter(): Adapter;
 }
 
-export type DbParam = OrmParam | AdapterBase;
+export type DbParam = OrmParam | Adapter;
 
-export const getMaybeTransactionAdapter = (db: DbParam): AdapterBase =>
+export const getMaybeTransactionAdapter = (db: DbParam): Adapter =>
   '$getAdapter' in db ? db.$getAdapter() : db;
 
 export const runSqlInSavePoint = async (

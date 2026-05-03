@@ -4,10 +4,10 @@ import { getMigratedVersionsMap } from '../migration/manage-migrated-versions';
 import { pathToFileURL } from 'node:url';
 import { RakeDbConfig } from '../config';
 import { getMigrations } from '../migration/migrations-set';
-import { AdapterBase, colors } from 'pqb/internal';
+import { Adapter, colors } from 'pqb/internal';
 
 export const listMigrationsStatuses = async (
-  adapters: AdapterBase[],
+  adapters: Adapter[],
   config: RakeDbConfig,
   params?: { showUrl?: boolean },
 ) => {
@@ -39,7 +39,7 @@ export const listMigrationsStatuses = async (
       .map(([version, up]) => `${version}${up ? 't' : 'f'}`)
       .join('');
 
-    const database = adapters[i].getDatabase();
+    const database = getAdapterDatabase(adapters[i], i);
 
     if (map[key]) {
       map[key].databases.push(database);
@@ -143,4 +143,19 @@ const makeChars = (count: number, char: string) => {
   }
 
   return chars;
+};
+
+const getAdapterDatabase = (adapter: Adapter, index: number): string => {
+  const getter = adapter.getDatabase;
+  if (getter) {
+    return getter.call(adapter);
+  }
+
+  const databaseURL = (adapter as { config?: { databaseURL?: string } }).config
+    ?.databaseURL;
+  if (databaseURL) {
+    return new URL(databaseURL).pathname.slice(1);
+  }
+
+  return `database-${index + 1}`;
 };

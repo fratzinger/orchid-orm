@@ -1,5 +1,5 @@
 import {
-  AdapterBase,
+  Adapter,
   ArrayColumn,
   Column,
   DomainColumn,
@@ -677,7 +677,7 @@ export const cmpRawSql = (a: RawSqlBase, b: RawSqlBase) => {
 };
 
 export const getMigrationsSchemaAndTable = (
-  adapter: AdapterBase,
+  adapter: Adapter,
   config: {
     migrationsTable: string;
   },
@@ -685,7 +685,24 @@ export const getMigrationsSchemaAndTable = (
   schema?: string;
   table: string;
 } => {
-  const schema = adapter.getSchema();
+  const schemaGetter = adapter.getSchema;
+  let schema = schemaGetter ? schemaGetter.call(adapter) : undefined;
+  if (!schema) {
+    schema = (
+      adapter as {
+        config?: { schema?: QuerySchema };
+        adapter?: { config?: { schema?: QuerySchema } };
+      }
+    ).config?.schema;
+  }
+  if (!schema) {
+    schema = (
+      adapter as {
+        adapter?: { config?: { schema?: QuerySchema } };
+      }
+    ).adapter?.config?.schema;
+  }
+
   const [tableSchema, table] = getSchemaAndTableFromName(
     schema,
     config.migrationsTable,
@@ -704,7 +721,7 @@ export const getMigrationsSchemaAndTable = (
 };
 
 export const migrationsSchemaTableSql = (
-  adapter: AdapterBase,
+  adapter: Adapter,
   config: {
     migrationsTable: string;
   },

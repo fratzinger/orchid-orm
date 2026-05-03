@@ -7,6 +7,7 @@ import {
   DefaultColumnTypes,
   defaultSchemaConfig,
   DefaultSchemaConfig,
+  AdapterClass,
 } from 'pqb/internal';
 import { asMock, TestAdapter } from 'test-utils';
 import { makeRakeDbConfig } from '../config.public';
@@ -47,7 +48,10 @@ const warn = jest.fn();
 const log = jest.fn();
 
 const options = { databaseURL: 'file:path' };
-const adapter = new TestAdapter(options);
+const adapter = new AdapterClass({
+  driverAdapter: TestAdapter,
+  config: options,
+});
 
 class BaseTable {
   static getFilePath() {

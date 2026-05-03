@@ -9,7 +9,7 @@ import {
   NodePostgresAdapterOptions,
   createDb as cdb,
 } from 'pqb/node-postgres';
-import { DbSharedOptions } from 'pqb/internal';
+import { DbSharedOptions, AdapterClass } from 'pqb/internal';
 
 export const Adapter = NodePostgresAdapter;
 
@@ -25,7 +25,10 @@ export const orchidORM = <T extends TableClasses>(
   return orchidORMWithAdapter(
     {
       ...options,
-      adapter: new NodePostgresAdapter(options),
+      adapter: new AdapterClass({
+        driverAdapter: NodePostgresAdapter,
+        config: options,
+      }),
       log,
     },
     tables,

@@ -343,14 +343,16 @@ export { exhaustive } from './utils';
 
 // Adapter
 export {
-  setConnectRetryConfig,
+  AdapterClass,
+  TransactionAdapterClass,
+  makeConnectRetryConfig,
   wrapAdapterFnWithConnectRetry,
-  type AdapterBase,
+  type Adapter,
+  type AdapterParams,
   type AdapterConfigBase,
   type QueryResult,
   type QueryArraysResult,
   type QueryResultRow,
-  type TransactionAdapterBase,
   type TransactionArgs,
   type AfterCommitStandaloneHook,
 } from './adapters/adapter';

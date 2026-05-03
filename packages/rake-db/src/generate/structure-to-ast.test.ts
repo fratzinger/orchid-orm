@@ -19,6 +19,7 @@ import {
   RawSql,
   isRawSQL,
   TemplateLiteralArgs,
+  AdapterClass,
 } from 'pqb/internal';
 import { structureToAst, StructureToAstCtx } from './structure-to-ast';
 import { RakeDbAst } from '../ast';
@@ -29,7 +30,10 @@ import { testConfig } from '../rake-db.test-utils';
 
 jest.mock('./db-structure');
 
-const adapter = new TestAdapter({ databaseURL: 'file:path' });
+const adapter = new AdapterClass({
+  driverAdapter: TestAdapter,
+  config: { databaseURL: 'file:path' },
+});
 const query = jest.fn().mockImplementation(() => ({ rows: [] }));
 adapter.query = query;
 adapter.arrays = query;

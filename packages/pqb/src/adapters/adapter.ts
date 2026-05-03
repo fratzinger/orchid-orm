@@ -1,8 +1,23 @@
-import { emptyObject } from '../utils';
+import {
+  emptyObject,
+  RecordString,
+  RecordStringOrNumber,
+  RecordUnknown,
+} from '../utils';
 import { setTimeout } from 'timers/promises';
 import { QueryError } from '../query/errors';
 import { Query, QuerySchema } from '../query';
-import type { SqlSessionState } from './features/sql-session-context';
+import {
+  sqlSessionContextComputeSetup,
+  sqlSessionContextExecute,
+  SqlSessionContextSetupResult,
+  SqlSessionState,
+} from './features/sql-session-context';
+import {
+  getResetLocalsSql,
+  getSetLocalsSql,
+  mergeLocals,
+} from './adapter.utils';
 
 export type { SqlSessionState } from './features/sql-session-context';
 
@@ -32,6 +47,15 @@ export interface QueryArraysResult<R extends any[] = any[]> {
 
 export interface AdapterConfigBase {
   databaseURL?: string;
+  database?: string;
+  user?: string;
+  password?: string | (() => string | Promise<string>);
+  searchPath?: string;
+  // oxlint-disable-next-line typescript/no-explicit-any - different drivers support different configs for this
+  ssl?: any;
+  locals?: RecordStringOrNumber;
+  schema?: QuerySchema;
+  host?: string;
   /**
    * This option may be useful in CI when database container has started, CI starts performing next steps,
    * migrations begin to apply though database may be not fully ready for connections yet.
@@ -116,36 +140,51 @@ export type TransactionArgs<Result> = [
   cbOrOptions:
     | undefined
     | AdapterTransactionOptions
-    | ((adapter: TransactionAdapterBase) => Promise<Result>),
-  optionalCb?: (adapter: TransactionAdapterBase) => Promise<Result>,
+    | ((adapter: TransactionAdapter) => Promise<Result>),
+  optionalCb?: (adapter: TransactionAdapter) => Promise<Result>,
 ];
 
+interface SolvedTransactionArgs<AdapterType, Result> {
+  options: AdapterTransactionOptions | undefined;
+  cb: (adapter: AdapterType) => Promise<Result>;
+}
+
+const transactionArgs: SolvedTransactionArgs<unknown, unknown> = {
+  cb: undefined,
+  options: undefined,
+} as never;
+
+const getTransactionArgs = <AdapterType, T>(
+  cbOrOptions:
+    | AdapterTransactionOptions
+    | ((adapter: AdapterType) => Promise<T>)
+    | undefined,
+  optionalCb?: (adapter: AdapterType) => Promise<T>,
+) => {
+  // Solve overloaded transaction args
+  if (typeof cbOrOptions === 'function') {
+    transactionArgs.cb = cbOrOptions as never;
+    transactionArgs.options = undefined;
+  } else {
+    transactionArgs.options = cbOrOptions as AdapterTransactionOptions;
+    transactionArgs.cb = optionalCb as never;
+  }
+  return transactionArgs as SolvedTransactionArgs<AdapterType, T>;
+};
+
 // Interface of a database adapter to use for different databases.
-export interface AdapterBase {
-  connectRetryConfig?: AdapterConfigConnectRetry;
-  searchPath?: string;
+// This is the full interface exposed to users, including metadata methods and clone.
+export interface Adapter {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   errorClass: new (...args: any[]) => Error;
-  assignError(to: QueryError, from: Error): void;
+  searchPath?: string;
+  driverAdapter: DriverAdapter;
+
+  // Connection state
   isInTransaction(): boolean;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  updateConfig(config: any): Promise<void>;
 
-  reconfigure(params: {
-    database?: string;
-    user?: string;
-    password?: string;
-    searchPath?: string;
-  }): AdapterBase;
-
-  getDatabase(): string;
-  getUser(): string;
-  getSearchPath(): string | undefined;
-  getHost(): string;
-  // adapter is not using the schema anyhow on its own, it just stores it for rake-db
-  getSchema(): QuerySchema | undefined;
-
-  connect?(): Promise<unknown>;
+  // Error handling
+  assignError(to: QueryError, from: Error): void;
 
   // make a query to get rows as objects
   query<T extends QueryResultRow = QueryResultRow>(
@@ -157,6 +196,7 @@ export interface AdapterBase {
     // SQL session state (role and setConfig) from async storage
     sqlSessionState?: SqlSessionState,
   ): Promise<QueryResult<T>>;
+
   // make a query to get rows as array of column values
   arrays<
     // oxlint-disable-next-line @typescript-eslint/no-explicit-any
@@ -170,6 +210,7 @@ export interface AdapterBase {
     // SQL session state (role and setConfig) from async storage
     sqlSessionState?: SqlSessionState,
   ): Promise<QueryArraysResult<R>>;
+
   /**
    * Run a transaction
    *
@@ -178,26 +219,729 @@ export interface AdapterBase {
    */
   transaction<T>(
     options: AdapterTransactionOptions | undefined,
-    cb: (adapter: TransactionAdapterBase) => Promise<T>,
+    cb: (adapter: TransactionAdapter) => Promise<T>,
   ): Promise<T>;
+
   /**
    * Run a transaction
    *
    * @param cb - callback will be called with a db client with a dedicated connection.
    */
-  transaction<T>(
-    cb: (adapter: TransactionAdapterBase) => Promise<T>,
-  ): Promise<T>;
+  transaction<T>(cb: (adapter: TransactionAdapter) => Promise<T>): Promise<T>;
+
   // close connection
   close(): Promise<void>;
+
+  // Metadata methods
+  getDatabase(): string;
+  getUser(): string;
+  getSearchPath(): string | undefined;
+  getHost(): string;
+  getSchema(): QuerySchema | undefined;
+
+  // Clone method
+  clone(params?: AdapterConfigBase): Adapter;
 }
 
 /**
- * Use it as an argument type when need to enforce the call site to use a transaction
+ * Adapter interface for transaction contexts.
  */
-export interface TransactionAdapterBase extends AdapterBase {
+export interface TransactionAdapter extends Adapter {
   isInTransaction(): true;
 }
+
+// oxlint-disable-next-line @typescript-eslint/no-explicit-any
+type Pool = any;
+// oxlint-disable-next-line @typescript-eslint/no-explicit-any
+type Client = any;
+
+/**
+ * Adapter class used by runtime orchestrator to create driver-specific adapters.
+ */
+export interface DriverAdapter {
+  // oxlint-disable-next-line @typescript-eslint/no-explicit-any
+  errorClass: new (...args: any[]) => Error;
+  errorFields: RecordString;
+  configure(config: AdapterConfigBase): Pool;
+  manualPool: boolean;
+  borrow(pool: Pool): Client;
+  release(client: Client): void;
+  queryClient<T extends QueryResultRow = QueryResultRow>(
+    client: Client,
+    text: string,
+    values?: unknown[],
+    // only has effect in a transaction
+    startingSavepoint?: string,
+    releasingSavepoint?: string,
+    // SQL session state (role and setConfig) from async storage
+    arraysMode?: boolean,
+  ): Promise<QueryResult<T>>;
+  begin<DriverClient, Result>(
+    pool: Pool,
+    cb: (client: DriverClient) => Promise<Result>,
+    options?: string,
+  ): Promise<Result>;
+  close(pool: Pool): Promise<void>;
+}
+
+/**
+ * Constructor params for the shared runtime adapter orchestrator.
+ */
+export interface AdapterParams {
+  /**
+   * Driver-specific adapter class implementing `DriverAdapter`.
+   */
+  driverAdapter: DriverAdapter;
+  /**
+   * Base config saved by runtime and used for clone recreation.
+   */
+  config: AdapterConfigBase;
+}
+
+/**
+ * Shared runtime adapter orchestrator over a driver-specific adapter implementation.
+ */
+export class AdapterClass implements Adapter {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  errorClass: new (...args: any[]) => Error;
+  driverAdapter: DriverAdapter;
+  private pool: Pool;
+  private readonly config: AdapterConfigBase;
+  private readonly connectionState: AdapterConnectionState;
+  private readonly locals: RecordStringOrNumber;
+
+  constructor(private readonly params: AdapterParams) {
+    this.config = { ...params.config };
+    this.locals = this.config.locals || emptyObject;
+
+    if (this.config.connectRetry) {
+      const connectRetryConfig = makeConnectRetryConfig(
+        this.config.connectRetry === true
+          ? emptyObject
+          : this.config.connectRetry,
+      );
+      if (connectRetryConfig) {
+        this.query = wrapAdapterFnWithConnectRetry(
+          connectRetryConfig,
+          this.query,
+        );
+        this.arrays = wrapAdapterFnWithConnectRetry(
+          connectRetryConfig,
+          this.arrays,
+        );
+      }
+    }
+    this.connectionState = createAdapterConnectionState(this.config);
+    this.config = createDriverAdapterConfig(this.config, this.connectionState);
+    this.driverAdapter = params.driverAdapter;
+    this.pool = this.driverAdapter.configure(this.config);
+    this.errorClass = this.driverAdapter.errorClass;
+  }
+
+  query<T extends QueryResultRow = QueryResultRow>(
+    text: string,
+    values?: unknown[],
+    // only has effect in a transaction
+    startingSavepoint?: string,
+    releasingSavepoint?: string,
+    // SQL session state (role and setConfig) from async storage
+    sqlSessionState?: SqlSessionState,
+  ): Promise<QueryResult<T>> {
+    return runQueryHandlePool<T>(
+      this.pool,
+      this.driverAdapter,
+      text,
+      values,
+      startingSavepoint,
+      releasingSavepoint,
+      sqlSessionState,
+    );
+  }
+
+  // make a query to get rows as array of column values
+  arrays<
+    // oxlint-disable-next-line @typescript-eslint/no-explicit-any
+    R extends any[] = any[],
+  >(
+    text: string,
+    values?: unknown[],
+    // only has effect in a transaction
+    startingSavepoint?: string,
+    releasingSavepoint?: string,
+    // SQL session state (role and setConfig) from async storage
+    sqlSessionState?: SqlSessionState,
+  ): Promise<QueryArraysResult<R>> {
+    return runQueryHandlePool<R>(
+      this.pool,
+      this.driverAdapter,
+      text,
+      values,
+      startingSavepoint,
+      releasingSavepoint,
+      sqlSessionState,
+      true,
+    );
+  }
+
+  clone(params?: AdapterConfigBase): Adapter {
+    return new AdapterClass({
+      driverAdapter: this.params.driverAdapter,
+      config: cloneAdapterConfig(this.config, params),
+    });
+  }
+
+  isInTransaction(): boolean {
+    return false;
+  }
+
+  getDatabase(): string {
+    return this.connectionState.database as string;
+  }
+
+  getUser(): string {
+    return this.connectionState.user as string;
+  }
+
+  getSearchPath(): string | undefined {
+    return this.connectionState.searchPath;
+  }
+
+  getHost(): string {
+    return this.connectionState.host as string;
+  }
+
+  getSchema(): QuerySchema | undefined {
+    return this.connectionState.schema;
+  }
+
+  transaction<T>(
+    options: AdapterTransactionOptions | undefined,
+    cb: (adapter: TransactionAdapter) => Promise<T>,
+  ): Promise<T>;
+  transaction<T>(cb: (adapter: TransactionAdapter) => Promise<T>): Promise<T>;
+  transaction<T>(
+    cbOrOptions:
+      | AdapterTransactionOptions
+      | ((adapter: TransactionAdapter) => Promise<T>)
+      | undefined,
+    optionalCb?: (adapter: TransactionAdapter) => Promise<T>,
+  ): Promise<T> {
+    const { cb, options } = getTransactionArgs(cbOrOptions, optionalCb);
+
+    return this.driverAdapter.begin(
+      this.pool,
+      (client) => {
+        let promises: Promise<unknown>[] | undefined;
+
+        // Apply transaction-scoped SQL session state (role and setConfig) once at transaction start
+        if (options?.sqlSessionState) {
+          const { role, setConfig } = options.sqlSessionState;
+          if (role) {
+            (promises ??= []).push(
+              this.driverAdapter.queryClient(client, `SET ROLE ${role}`),
+            );
+          }
+          if (setConfig && Object.keys(setConfig).length > 0) {
+            const setExpressions = Object.entries(setConfig)
+              .map(
+                ([key, value]) =>
+                  `set_config('${key.replace(/'/g, "''")}', '${typeof value === 'string' ? value.replace(/'/g, "''") : value}', true)`,
+              )
+              .join(', ');
+
+            (promises ??= []).push(
+              this.driverAdapter.queryClient(
+                client,
+                `SELECT ${setExpressions}`,
+              ),
+            );
+          }
+        }
+
+        const localsSql = getSetLocalsSql(options);
+        if (localsSql) {
+          (promises ??= []).push(
+            this.driverAdapter.queryClient(client, localsSql),
+          );
+        }
+
+        const locals = mergeLocals(this.locals, options);
+
+        const transaction = cb(
+          new TransactionAdapterClass(this, locals, client),
+        );
+
+        return promises
+          ? Promise.all(promises).then(() => transaction)
+          : transaction;
+      },
+      options?.options,
+    ) as Promise<T>;
+  }
+
+  async close(): Promise<void> {
+    const { pool } = this;
+    this.pool = this.driverAdapter.configure(this.config);
+    await this.driverAdapter.close(pool);
+  }
+
+  assignError(to: QueryError, from: Error): void {
+    const { errorFields } = this.driverAdapter;
+    for (const key in errorFields) {
+      (to as unknown as RecordUnknown)[key] = (
+        from as unknown as RecordUnknown
+      )[key];
+    }
+  }
+}
+
+/**
+ * Shared runtime transaction adapter orchestrator over a driver-specific transaction adapter.
+ */
+export class TransactionAdapterClass implements TransactionAdapter {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  errorClass: new (...args: any[]) => Error;
+
+  driverAdapter: DriverAdapter;
+
+  constructor(
+    private adapter: Adapter,
+    private locals: RecordStringOrNumber,
+    private client: Client,
+  ) {
+    this.driverAdapter = adapter.driverAdapter;
+    this.errorClass = this.adapter.errorClass;
+  }
+
+  query<T extends QueryResultRow = QueryResultRow>(
+    text: string,
+    values?: unknown[],
+    // only has effect in a transaction
+    startingSavepoint?: string,
+    releasingSavepoint?: string,
+    // SQL session state (role and setConfig) from async storage
+    sqlSessionState?: SqlSessionState,
+  ): Promise<QueryResult<T>> {
+    const setup = sqlSessionContextComputeSetup(sqlSessionState);
+
+    return runQueryHandleSetupAndCleanup<T>(
+      this.driverAdapter,
+      this.client,
+      text,
+      values,
+      startingSavepoint,
+      releasingSavepoint,
+      setup,
+    );
+  }
+
+  // make a query to get rows as array of column values
+  arrays<
+    // oxlint-disable-next-line @typescript-eslint/no-explicit-any
+    R extends any[] = any[],
+  >(
+    text: string,
+    values?: unknown[],
+    // only has effect in a transaction
+    startingSavepoint?: string,
+    releasingSavepoint?: string,
+    // SQL session state (role and setConfig) from async storage
+    sqlSessionState?: SqlSessionState,
+  ): Promise<QueryArraysResult<R>> {
+    const setup = sqlSessionContextComputeSetup(sqlSessionState);
+
+    return runQueryHandleSetupAndCleanup<R>(
+      this.driverAdapter,
+      this.client,
+      text,
+      values,
+      startingSavepoint,
+      releasingSavepoint,
+      setup,
+      true,
+    );
+  }
+
+  clone(params?: AdapterConfigBase): Adapter {
+    return this.adapter.clone(params);
+  }
+
+  isInTransaction(): true {
+    return true;
+  }
+
+  getDatabase(): string {
+    return this.adapter.getDatabase();
+  }
+
+  getUser(): string {
+    return this.adapter.getUser();
+  }
+
+  getSearchPath(): string | undefined {
+    return this.adapter.getSearchPath();
+  }
+
+  getHost(): string {
+    return this.adapter.getHost();
+  }
+
+  getSchema(): QuerySchema | undefined {
+    return this.adapter.getSchema();
+  }
+
+  transaction<T>(
+    options: AdapterTransactionOptions | undefined,
+    cb: (adapter: TransactionAdapter) => Promise<T>,
+  ): Promise<T>;
+  transaction<T>(cb: (adapter: TransactionAdapter) => Promise<T>): Promise<T>;
+  async transaction<T>(
+    cbOrOptions:
+      | AdapterTransactionOptions
+      | ((adapter: TransactionAdapter) => Promise<T>)
+      | undefined,
+    optionalCb?: (adapter: TransactionAdapter) => Promise<T>,
+  ): Promise<T> {
+    const { cb, options } = getTransactionArgs<TransactionAdapter, T>(
+      cbOrOptions,
+      optionalCb,
+    );
+
+    // For nested transactions with SQL session state, capture outer transaction-local values
+    let capturedRole: string | undefined;
+    const capturedConfigs: Record<string, string | null> = {};
+    const sqlSession = options?.sqlSessionState;
+
+    if (sqlSession) {
+      // Capture current role if we're going to override it
+      if (sqlSession.role) {
+        const roleResult = await this.driverAdapter.queryClient<{
+          role: string;
+        }>(this.client, 'SELECT current_role as role');
+        capturedRole = roleResult.rows[0].role;
+      }
+
+      // Capture current config values for keys we're going to override
+      if (
+        sqlSession.setConfig &&
+        Object.keys(sqlSession.setConfig).length > 0
+      ) {
+        for (const key of Object.keys(sqlSession.setConfig)) {
+          const configResult = await this.driverAdapter.queryClient<{
+            val: string | null;
+          }>(
+            this.client,
+            `SELECT current_setting('${key.replace(/'/g, "''")}', true) as val`,
+          );
+          capturedConfigs[key] = configResult.rows[0].val;
+        }
+      }
+    }
+
+    const localsSql = getSetLocalsSql(options);
+    if (localsSql) {
+      this.driverAdapter.queryClient(this.client, localsSql);
+    }
+
+    const locals = mergeLocals(this.locals, options);
+
+    try {
+      return await cb(
+        new TransactionAdapterClass(this.adapter, locals, this.client),
+      );
+    } finally {
+      // Restore outer transaction-local values after nested transaction completes
+      if (sqlSession) {
+        if (capturedRole !== undefined) {
+          await this.driverAdapter.queryClient(
+            this.client,
+            `SET ROLE ${capturedRole}`,
+          );
+        }
+
+        for (const [key, value] of Object.entries(capturedConfigs)) {
+          // Reset to empty string if previously unset (null), otherwise restore previous value
+          const restoreValue = value === null ? '' : value;
+          await this.driverAdapter.queryClient(
+            this.client,
+            `SELECT set_config('${key.replace(/'/g, "''")}', '${restoreValue.replace(/'/g, "''")}', true)`,
+          );
+        }
+      }
+
+      const resetLocalsSql = getResetLocalsSql(this.locals, options);
+      if (resetLocalsSql) {
+        await this.driverAdapter.queryClient(this.client, resetLocalsSql);
+      }
+    }
+  }
+
+  close(): Promise<void> {
+    return this.adapter.close();
+  }
+
+  assignError(to: QueryError, from: Error): void {
+    return this.adapter.assignError(to, from);
+  }
+}
+
+const runQueryHandlePool = async <T extends QueryResultRow = QueryResultRow>(
+  pool: Pool,
+  driverAdapter: DriverAdapter,
+  text: string,
+  values?: unknown[],
+  // only has effect in a transaction
+  startingSavepoint?: string,
+  releasingSavepoint?: string,
+  // SQL session state (role and setConfig) from async storage
+  sqlSessionState?: SqlSessionState,
+  arraysMode?: boolean,
+  client?: Client,
+): Promise<QueryResult<T>> => {
+  const setup = sqlSessionContextComputeSetup(sqlSessionState);
+
+  if (client || (!driverAdapter.manualPool && !setup)) {
+    return runQueryHandleSetupAndCleanup(
+      driverAdapter,
+      client || pool,
+      text,
+      values,
+      startingSavepoint,
+      releasingSavepoint,
+      setup,
+      arraysMode,
+    );
+  }
+
+  client = await driverAdapter.borrow(pool);
+
+  try {
+    return await runQueryHandleSetupAndCleanup(
+      driverAdapter,
+      client,
+      text,
+      values,
+      startingSavepoint,
+      releasingSavepoint,
+      setup,
+      arraysMode,
+    );
+  } finally {
+    driverAdapter.release(client);
+  }
+};
+
+const runQueryHandleSetupAndCleanup = <
+  T extends QueryResultRow = QueryResultRow,
+>(
+  driverAdapter: DriverAdapter,
+  client: Client,
+  text: string,
+  values?: unknown[],
+  // only has effect in a transaction
+  startingSavepoint?: string,
+  releasingSavepoint?: string,
+  setup?: SqlSessionContextSetupResult,
+  arraysMode?: boolean,
+): Promise<QueryResult<T>> => {
+  if (setup) {
+    return sqlSessionContextExecute<T>(
+      (text, values) =>
+        driverAdapter.queryClient(
+          client,
+          text,
+          values,
+          undefined,
+          undefined,
+          true,
+        ),
+      setup,
+      () =>
+        driverAdapter.queryClient(
+          client,
+          text,
+          values,
+          startingSavepoint,
+          releasingSavepoint,
+          arraysMode,
+        ),
+    );
+  }
+
+  return driverAdapter.queryClient(
+    client,
+    text,
+    values,
+    startingSavepoint,
+    releasingSavepoint,
+    arraysMode,
+  );
+};
+
+interface AdapterConnectionState {
+  /**
+   * Original config copy used for runtime metadata derivation and clone.
+   */
+  originalConfig: AdapterConfigBase;
+  /**
+   * Full connection URL when adapter config includes it.
+   */
+  databaseURL?: string;
+  /**
+   * Normalized database name derived from URL or direct config.
+   */
+  database?: string;
+  /**
+   * Normalized user name derived from URL or direct config.
+   */
+  user?: string;
+  /**
+   * Normalized password value derived from URL or direct config.
+   */
+  password?: string | (() => string | Promise<string>);
+  /**
+   * Normalized search_path derived from URL or direct config.
+   */
+  searchPath?: string;
+  /**
+   * Normalized host derived from URL or direct config.
+   */
+  host?: string;
+  /**
+   * Schema metadata from config or adapter instance.
+   */
+  schema?: QuerySchema;
+}
+
+const createAdapterConnectionState = (
+  config: AdapterConfigBase,
+): AdapterConnectionState => {
+  const state: AdapterConnectionState = {
+    originalConfig: { ...config },
+  };
+
+  const url = config.databaseURL ? new URL(config.databaseURL) : undefined;
+  if (url) {
+    state.databaseURL = url.toString();
+    state.database = url.pathname.slice(1);
+    state.user = url.username;
+    state.password = url.password;
+    state.searchPath = url.searchParams.get('searchPath') ?? config.searchPath;
+    state.host = url.hostname;
+  } else {
+    state.database = config.database;
+    state.user = config.user;
+    state.password = config.password;
+    state.searchPath = config.searchPath;
+    state.host = config.host;
+  }
+
+  state.schema = config.schema;
+
+  return state;
+};
+
+const cloneAdapterConfig = (
+  config: AdapterConfigBase,
+  params?: AdapterConfigBase,
+): AdapterConfigBase => {
+  if (!params) {
+    return { ...config };
+  }
+
+  const clonedConfig = { ...config };
+
+  if ('databaseURL' in params) {
+    clonedConfig.databaseURL = params.databaseURL;
+  }
+
+  const url = clonedConfig.databaseURL
+    ? new URL(clonedConfig.databaseURL)
+    : undefined;
+  if (url) {
+    if ('database' in params) {
+      url.pathname = `/${params.database ?? ''}`;
+    }
+
+    if ('user' in params) {
+      url.username = params.user ?? '';
+    }
+
+    if ('password' in params && typeof params.password !== 'function') {
+      url.password = params.password ?? '';
+    }
+
+    if ('searchPath' in params) {
+      if (params.searchPath === undefined) {
+        url.searchParams.delete('searchPath');
+      } else {
+        url.searchParams.set('searchPath', params.searchPath);
+      }
+      clonedConfig.searchPath = params.searchPath;
+    }
+
+    clonedConfig.databaseURL = url.toString();
+  } else {
+    if ('database' in params) {
+      clonedConfig.database = params.database;
+    }
+
+    if ('user' in params) {
+      clonedConfig.user = params.user;
+    }
+
+    if ('password' in params) {
+      clonedConfig.password = params.password;
+    }
+
+    if ('searchPath' in params) {
+      clonedConfig.searchPath = params.searchPath;
+    }
+  }
+
+  if ('connectRetry' in params) {
+    clonedConfig.connectRetry = params.connectRetry;
+  }
+
+  return clonedConfig;
+};
+
+const createDriverAdapterConfig = (
+  config: AdapterConfigBase,
+  state: AdapterConnectionState,
+): AdapterConfigBase => {
+  const locals: RecordStringOrNumber = config.locals
+    ? { ...config.locals }
+    : {};
+  delete locals.search_path;
+  if (state.searchPath && state.searchPath !== 'public') {
+    locals.search_path = state.searchPath;
+  }
+
+  const driverConfig: AdapterConfigBase = {
+    ...config,
+    searchPath: state.searchPath,
+    locals,
+  };
+
+  if (driverConfig.databaseURL) {
+    const url = new URL(driverConfig.databaseURL);
+    url.searchParams.delete('searchPath');
+
+    const ssl = url.searchParams.get('ssl');
+    if (ssl === 'false') {
+      driverConfig.ssl = false;
+      url.searchParams.delete('ssl');
+    } else if (ssl === 'true') {
+      driverConfig.ssl = true;
+      url.searchParams.delete('ssl');
+    }
+
+    driverConfig.databaseURL = url.toString();
+  }
+
+  return driverConfig;
+};
 
 /**
  * Element of `afterCommit` transaction array. See {@link AsyncState.afterCommit}.
@@ -217,11 +961,10 @@ export interface AfterCommitStandaloneHook {
   (): unknown | Promise<unknown>;
 }
 
-export const setConnectRetryConfig = (
-  adapter: AdapterBase,
+export const makeConnectRetryConfig = (
   config: AdapterConfigConnectRetryParam,
-) => {
-  adapter.connectRetryConfig = {
+): AdapterConfigConnectRetry => {
+  return {
     attempts: config.attempts ?? 10,
     strategy:
       typeof config.strategy === 'function'
@@ -231,30 +974,28 @@ export const setConnectRetryConfig = (
 };
 
 export const wrapAdapterFnWithConnectRetry = <
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  Fn extends (this: unknown, ...args: any[]) => Promise<unknown>,
+  // oxlint-disable-next-line typescript/no-explicit-any
+  Fn extends (...args: any[]) => any,
 >(
-  adapter: AdapterBase,
+  connectRetryConfig: AdapterConfigConnectRetry,
   fn: Fn,
-) => {
-  return async function (...args) {
+): Fn => {
+  return async function (this: unknown, ...args: unknown[]) {
     let attempt = 1;
     for (;;) {
       try {
-        return await fn.call(this, ...args);
+        return await fn.call(this as never, ...args);
       } catch (err) {
-        const config = adapter.connectRetryConfig;
         if (
           !err ||
           typeof err !== 'object' ||
           (err as { code: string }).code !== 'ECONNREFUSED' ||
-          !config ||
-          attempt >= config.attempts
+          attempt >= connectRetryConfig.attempts
         ) {
           throw err;
         }
 
-        await config.strategy(attempt, config.attempts);
+        await connectRetryConfig.strategy(attempt, connectRetryConfig.attempts);
         attempt++;
       }
     }

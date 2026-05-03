@@ -1,6 +1,10 @@
-import { db, TestAdapter, TestTransactionAdapter } from 'test-utils';
+import { db } from 'test-utils';
 import { Query, testTransaction } from 'pqb';
-import { ColumnsShape } from 'pqb/internal';
+import {
+  AdapterClass,
+  ColumnsShape,
+  TransactionAdapterClass,
+} from 'pqb/internal';
 
 const tableJsonBuildObject = (table: Query) => {
   const cache: { [key: string]: string } = {};
@@ -143,10 +147,10 @@ export const useQueryCounter = () => {
   };
 
   const querySpies = [
-    jest.spyOn(TestAdapter.prototype, 'query'),
-    jest.spyOn(TestAdapter.prototype, 'arrays'),
-    jest.spyOn(TestTransactionAdapter.prototype, 'query'),
-    jest.spyOn(TestTransactionAdapter.prototype, 'arrays'),
+    jest.spyOn(AdapterClass.prototype, 'query'),
+    jest.spyOn(AdapterClass.prototype, 'arrays'),
+    jest.spyOn(TransactionAdapterClass.prototype, 'query'),
+    jest.spyOn(TransactionAdapterClass.prototype, 'arrays'),
   ];
 
   beforeEach(resetQueriesCount);

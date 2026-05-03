@@ -63,7 +63,7 @@ import {
   RecordUnknown,
   toSnakeCase,
 } from '../utils';
-import { AdapterBase, QueryArraysResult } from '../adapters/adapter';
+import { Adapter, QueryArraysResult } from '../adapters/adapter';
 import { NotFoundError, QueryError, QueryErrorName } from './errors';
 import { ColumnsParsers } from './query-columns/query-column-parsers';
 import { MaybeArray } from 'rollup';
@@ -157,7 +157,7 @@ export interface DbOptionsWithAdapter<
   SchemaConfig extends ColumnSchemaConfig,
   ColumnTypes,
 > extends DbOptions<SchemaConfig, ColumnTypes> {
-  adapter: AdapterBase;
+  adapter: Adapter;
 }
 
 // Options of `createDb`.
@@ -281,7 +281,7 @@ export class Db<
   declare catch: QueryCatch;
 
   constructor(
-    public adapterNotInTransaction: AdapterBase,
+    public adapterNotInTransaction: Adapter,
     public qb: QueryBuilder,
     public table: Table = undefined as Table,
     public shape: ShapeWithComputed = anyShape as ShapeWithComputed,
@@ -500,11 +500,10 @@ export class Db<
    * When in transaction, returns a db adapter object for the transaction,
    * returns a default adapter object otherwise.
    */
-  $getAdapter() {
-    return (
-      this.internal.asyncStorage.getStore()?.transactionAdapter ||
-      this.adapterNotInTransaction
-    );
+  $getAdapter(): Adapter {
+    const store = this.internal.asyncStorage.getStore();
+    return (store?.transactionAdapter ??
+      this.adapterNotInTransaction) as Adapter;
   }
 
   [inspect.custom]() {
@@ -684,8 +683,9 @@ export interface DbResult<ColumnTypes>
   extends
     Db<string, never, never, never, never, never, ColumnTypes>,
     DbTableConstructor<ColumnTypes> {
-  adapter: AdapterBase;
-  close: AdapterBase['close'];
+  adapterNotInTransaction: Adapter;
+  adapter: Adapter;
+  close: Adapter['close'];
   sql: DbSqlMethod<ColumnTypes>;
 }
 {
@@ -823,7 +823,7 @@ export const createDbWithAdapter = <
     options,
   ) => {
     return new Db(
-      adapter,
+      adapter as Adapter,
       qb as never,
       table,
       typeof shape === 'function'
@@ -864,14 +864,14 @@ export function _createDbSqlMethod<ColumnTypes>(
 }
 
 export const _initQueryBuilder = (
-  adapter: AdapterBase,
+  adapter: Adapter,
   columnTypes: unknown,
   asyncStorage: AsyncLocalStorage<AsyncState>,
   commonOptions: DbTableOptions<unknown, undefined, Column.QueryColumns>,
   options: DbSharedOptions,
 ): Db => {
   const qb = new Db(
-    adapter,
+    adapter as Adapter,
     undefined as unknown as QueryBuilder,
     undefined,
     anyShape,

@@ -1,4 +1,5 @@
 import { testTransaction, createDbWithAdapter } from 'pqb';
+import { AdapterClass } from 'pqb/internal';
 import { Column } from 'pqb/internal';
 import {
   makeColumnTypes,
@@ -14,14 +15,12 @@ import { zodSchemaConfig, ZodSchemaConfig } from 'orchid-orm-schema-to-zod';
 import {
   createDb as nodePostgresCreateDb,
   NodePostgresAdapter,
-  NodePostgresTransactionAdapter,
 } from 'pqb/node-postgres';
 import { orchidORM as nodePostgresOrchidORM } from '../../orm/src/adapters/node-postgres';
 import { rakeDb as nodePostgresRakeDb } from '../../rake-db/src/adapters/node-postgres';
 import {
   createDb as postgresJsCreateDb,
   PostgresJsAdapter,
-  PostgresJsTransactionAdapter,
 } from 'pqb/postgres-js';
 import { orchidORM as postgresJsOrchidORM } from '../../orm/src/adapters/postgres-js';
 import { rakeDb as postgresJsRakeDb } from '../../rake-db/src/adapters/postgres-js';
@@ -31,7 +30,6 @@ export const testingWithPostgresJS = true;
 function setupNodePostgres() {
   return {
     TestAdapter: NodePostgresAdapter,
-    TestTransactionAdapter: NodePostgresTransactionAdapter,
     createDb: nodePostgresCreateDb,
     orchidORM: nodePostgresOrchidORM,
     rakeDb: nodePostgresRakeDb,
@@ -41,7 +39,6 @@ function setupNodePostgres() {
 function setupPostgresJs() {
   return {
     TestAdapter: PostgresJsAdapter,
-    TestTransactionAdapter: PostgresJsTransactionAdapter,
     createDb: postgresJsCreateDb,
     orchidORM: postgresJsOrchidORM,
     rakeDb: postgresJsRakeDb,
@@ -52,8 +49,11 @@ const driverItems = testingWithPostgresJS
   ? setupPostgresJs()
   : setupNodePostgres();
 
+export const allDriverAdapters = {
+  nodePostgres: NodePostgresAdapter,
+  postgresJs: PostgresJsAdapter,
+};
 export const TestAdapter = driverItems.TestAdapter;
-export const TestTransactionAdapter = driverItems.TestTransactionAdapter;
 export const createTestDb = driverItems.createDb;
 export const testOrchidORM = driverItems.orchidORM;
 export const testRakeDb = driverItems.rakeDb;
@@ -69,7 +69,10 @@ export const testDbOptions = {
 
 export const testSchemaConfig = zodSchemaConfig;
 
-export const testAdapter = new TestAdapter(testDbOptions);
+export const testAdapter = new AdapterClass({
+  driverAdapter: TestAdapter,
+  config: testDbOptions,
+});
 
 export const columnTypes = makeColumnTypes(defaultSchemaConfig);
 

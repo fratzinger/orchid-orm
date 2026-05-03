@@ -10,7 +10,6 @@ import {
   testAdapter,
   testDb,
   testDbOptions,
-  TestTransactionAdapter,
   useTestDatabase,
 } from 'test-utils';
 import { raw } from './expressions/raw-sql';
@@ -22,6 +21,7 @@ import {
 import { RecordUnknown } from '../utils';
 import { QueryLogger } from './basic-features/log/log';
 import { orchidORMWithAdapter } from 'orchid-orm';
+import { Adapter, TransactionAdapterClass } from '../adapters/adapter';
 
 describe('db connection', () => {
   it('should be able to open connection after closing it', async () => {
@@ -618,14 +618,14 @@ describe('db', () => {
     });
 
     it('returns a current transaction adapter when not in transaction', async () => {
-      let adapter;
+      let adapter: Adapter | undefined;
 
       await testDb.transaction(async () => {
         adapter = testDb.$getAdapter();
       });
 
       expect(adapter).not.toBe(testAdapter);
-      expect(adapter).toBeInstanceOf(TestTransactionAdapter);
+      expect(adapter).toBeInstanceOf(TransactionAdapterClass);
     });
   });
 });

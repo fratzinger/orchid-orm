@@ -1,7 +1,7 @@
 import { RakeDbCtx } from '../common';
 import { SilentQueries } from './migration';
 import {
-  AdapterBase,
+  Adapter,
   QueryLogger,
   RecordOptionalString,
   RecordString,
@@ -100,7 +100,7 @@ export class NoMigrationsTableError extends Error {}
 
 export const getMigratedVersionsMap = async (
   ctx: RakeDbCtx,
-  adapter: AdapterBase,
+  adapter: Adapter,
   config: Pick<
     MigrateConfigInternal,
     | 'migrations'
@@ -186,7 +186,7 @@ export const getMigratedVersionsMap = async (
 
 async function renameMigrations(
   config: Pick<RakeDbConfig, 'migrationId' | 'migrationsTable'>,
-  trx: AdapterBase,
+  trx: Adapter,
   versions: RecordString,
   renameTo: RakeDbRenameMigrations,
 ) {

@@ -166,7 +166,6 @@ export const sqlSessionContextExecute = async <T extends QueryResultRow>(
   query: SqlSessionContextQueryFn,
   setup: SqlSessionContextSetupResult | undefined,
   mainQuery: () => Promise<QueryResult<T>>,
-  release?: () => Promise<void>,
 ): Promise<QueryResult<T>> => {
   if (!setup) {
     return mainQuery();
@@ -210,29 +209,23 @@ export const sqlSessionContextExecute = async <T extends QueryResultRow>(
     await Promise.all(setupPromises);
     return await mainQuery();
   } finally {
-    try {
-      const cleanupPromises: Promise<unknown>[] = [];
+    const cleanupPromises: Promise<unknown>[] = [];
 
-      if (roleSetupSql && captured.previousRole !== undefined) {
-        cleanupPromises.push(
-          query(`SET ROLE ${quoteRoleIdentifier(captured.previousRole)}`),
-        );
-      }
+    if (roleSetupSql && captured.previousRole !== undefined) {
+      cleanupPromises.push(
+        query(`SET ROLE ${quoteRoleIdentifier(captured.previousRole)}`),
+      );
+    }
 
-      if (captured.previousConfigs) {
-        const restoreSql = sqlSessionContextBuildConfigRestoreBatchSql(
-          captured.previousConfigs,
-        );
-        if (restoreSql) {
-          cleanupPromises.push(query(restoreSql));
-        }
-      }
-
-      await Promise.all(cleanupPromises);
-    } finally {
-      if (release) {
-        await release();
+    if (captured.previousConfigs) {
+      const restoreSql = sqlSessionContextBuildConfigRestoreBatchSql(
+        captured.previousConfigs,
+      );
+      if (restoreSql) {
+        cleanupPromises.push(query(restoreSql));
       }
     }
+
+    await Promise.all(cleanupPromises);
   }
 };

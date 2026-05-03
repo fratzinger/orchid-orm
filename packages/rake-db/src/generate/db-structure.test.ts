@@ -1,6 +1,7 @@
 import { introspectDbSchema, IntrospectedStructure } from './db-structure';
 import { dbStructureMockFactory } from './db-structure.mockFactory';
 import { asMock, TestAdapter } from 'test-utils';
+import { AdapterClass } from 'pqb/internal';
 
 interface RawDefaultPrivilege {
   grantor: string;
@@ -29,8 +30,9 @@ const defaultPrivilege = (
   ...data,
 });
 
-const adapter = new TestAdapter({
-  databaseURL: process.env.PG_URL,
+const adapter = new AdapterClass({
+  driverAdapter: TestAdapter,
+  config: { databaseURL: process.env.PG_URL },
 });
 
 const mockQueryResult = (data: Partial<IntrospectedStructure>) => {

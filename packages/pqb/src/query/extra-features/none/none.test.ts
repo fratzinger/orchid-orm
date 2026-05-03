@@ -1,11 +1,12 @@
 import { User, userData, UserRecord } from '../../../test-utils/pqb.test-utils';
 import { NotFoundError } from '../../errors';
-import { assertType, TestAdapter, useTestDatabase } from 'test-utils';
+import { assertType, useTestDatabase } from 'test-utils';
+import { AdapterClass } from '../../../adapters/adapter';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const query = jest.fn<any, any>(() => Promise.resolve({ rows: [] }));
-TestAdapter.prototype.query = query;
-TestAdapter.prototype.arrays = query;
+AdapterClass.prototype.query = query;
+AdapterClass.prototype.arrays = query;
 
 describe('none', () => {
   test('mock is set up correctly', async () => {

@@ -4,12 +4,19 @@ import path from 'path';
 import { getMigratedVersionsMap } from '../migration/manage-migrated-versions';
 import { asMock, TestAdapter } from 'test-utils';
 import { getMigrations } from '../migration/migrations-set';
+import { AdapterClass } from 'pqb/internal';
 
 jest.mock('../migration/migrations-set');
 jest.mock('../migration/manage-migrated-versions');
 
 const options = [{ databaseURL: 'postgres://user@localhost/dbname' }];
-const adapters = options.map((opts) => new TestAdapter(opts));
+const adapters = options.map(
+  (config) =>
+    new AdapterClass({
+      driverAdapter: TestAdapter,
+      config,
+    }),
+);
 
 describe('listMigrationsStatuses', () => {
   it('should log a list of migrations', async () => {

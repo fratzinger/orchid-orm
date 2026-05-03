@@ -1,13 +1,13 @@
 ---
 name: 'Spec'
-description: Read specs/<feature-name>/<NUMBER-idea-name>/selected-variant.md, complete the feature design, and write or update spec.md and tasks.md
+description: Complete a selected idea's feature design using selected-variant.md when present and otherwise the user prompt, then write or update spec.md and tasks.md
 category: Workflow
 tags: [spec, tasks, design, planning]
 ---
 
 Ignore other spec-writing, brainstorming skills if any.
 
-Read an existing selected idea from `specs/<feature-name>/<NUMBER-idea-name>/selected-variant.md`, inspect the relevant Orchid docs and code, and write or update:
+Read the selected idea requirements from `specs/<feature-name>/<NUMBER-idea-name>/selected-variant.md` when it exists; otherwise use the user's prompt as the source of truth for the selected idea's requirements. Inspect the relevant Orchid docs and code, and write or update:
 
 - `specs/<feature-name>/<NUMBER-idea-name>/spec.md`
 - `specs/<feature-name>/<NUMBER-idea-name>/tasks.md`
@@ -16,6 +16,7 @@ Read an existing selected idea from `specs/<feature-name>/<NUMBER-idea-name>/sel
 
 - a feature folder inside `specs/`
 - an idea number or idea title inside that feature folder
+- any additional prompt details that define or refine the idea, especially when `selected-variant.md` is missing
 
 Examples:
 
@@ -31,14 +32,16 @@ Produce two implementation inputs for the selected idea:
 
 This command is a design-completion workflow, not a research-only workflow and not an implementation workflow.
 
-`selected-variant.md` is the authoritative source of requirements for the selected idea.
-Trust its goals, scope, constraints, and confirmed decisions.
-But it is not necessarily a complete finished design, and it is not the only context that matters.
-Use the selected variant as the requirements baseline, then use relevant Orchid docs, real code, and the optional parent `research.md` to complete the public API and high-level behavior where needed.
-Preserve the selected variant's intent precisely; do not change what it already decided. Only fill the gaps and add the missing design needed for what the selected variant already implies but does not fully define.
+Use exactly one authoritative requirements baseline for the selected idea:
 
-Ensure there is no conflicts, contradictions between the `selected-variant.md` and the resulting `spec.md`.
-If there are any, `selected-variant.md` wins, change the `spec.md` to conform.
+- If `specs/<feature-name>/<NUMBER-idea-name>/selected-variant.md` exists, it is the authoritative source of requirements. Trust its goals, scope, constraints, and confirmed decisions. Preserve its intent precisely; only fill gaps and add missing design that it already implies but does not fully define.
+- If `selected-variant.md` does not exist, the user's `/spec ...` prompt is the authoritative source of truth for the selected idea's requirements. Trust the prompt's stated goals, scope, constraints, examples, naming, and confirmed decisions. Preserve the prompt's intent precisely; only fill gaps needed to turn it into a complete design.
+
+The authoritative requirements baseline is not necessarily a complete finished design, and it is not the only context that matters.
+Use the baseline together with relevant Orchid docs, real code, and the optional parent `research.md` to complete the public API and high-level behavior where needed.
+
+Ensure there are no conflicts or contradictions between the authoritative requirements baseline and the resulting `spec.md`.
+If there are any, the authoritative requirements baseline wins; change `spec.md` to conform.
 
 **Steps**
 
@@ -72,35 +75,49 @@ If there are any, `selected-variant.md` wins, change the `spec.md` to conform.
 
    `specs/<feature-name>/<NUMBER-idea-name>`
 
-3. **Verify the required input files**
+3. **Verify the available input files**
 
-   Confirm that:
+   Confirm whether:
    - `specs/<feature-name>/<NUMBER-idea-name>/selected-variant.md` exists
-   - `specs/<feature-name>/research.md` may exist, but is optional
+   - `specs/<feature-name>/research.md` exists; it is optional
 
    Ignore every other file in `specs/<feature-name>/`.
 
-   If `selected-variant.md` is missing, stop and tell the user that the idea is not ready for spec generation yet.
    Do not create `selected-variant.md` in this command.
+   If `selected-variant.md` is missing, continue and use the user's prompt as the authoritative requirements baseline.
 
-4. **Read `selected-variant.md` carefully**
+4. **Read the authoritative requirements baseline carefully**
 
-   Read the full `selected-variant.md` before drafting anything.
+   Before drafting anything, determine which authoritative requirements baseline applies and read it fully.
 
-   Understand:
-   - the goal of the selected idea
-   - the proposed public interface
-   - explicit constraints and trade-offs
-   - what is already decided
-   - what is still implied rather than specified
-   - which packages or docs are likely affected
+   If `selected-variant.md` exists:
+   - Read the full `selected-variant.md`.
+   - Understand:
+     - the goal of the selected idea
+     - the proposed public interface
+     - explicit constraints and trade-offs
+     - what is already decided
+     - what is still implied rather than specified
+     - which packages or docs are likely affected
+   - If the file has a `## Refinement` section, treat the confirmed questions and answers there as part of the current design intent.
+   - If the main body and a confirmed refinement answer conflict, use the confirmed refinement answer as the newer decision.
 
-   If the file has a `## Refinement` section, treat the confirmed questions and answers there as part of the current design intent.
-   If the main body and a confirmed refinement answer conflict, use the confirmed refinement answer as the newer decision.
+   If `selected-variant.md` does not exist:
+   - Read the full user prompt carefully.
+   - Treat the prompt as the source of truth for the selected idea's requirements.
+   - Understand:
+     - the goal of the selected idea
+     - the proposed public interface or workflow
+     - explicit constraints and trade-offs
+     - what is already decided
+     - what is still implied rather than specified
+     - which packages or docs are likely affected
+   - Treat explicit examples, naming, and stated behavior in the prompt as confirmed design intent unless the prompt itself corrects them.
+   - If the prompt only identifies the folder and idea but does not provide enough user-visible requirements to define the feature without inventing it from scratch, stop and ask one focused clarifying question.
 
 5. **Read broader research when available**
 
-   If `specs/<feature-name>/research.md` exists, read it after `selected-variant.md`.
+   If `specs/<feature-name>/research.md` exists, read it after the authoritative requirements baseline.
 
    Use it only for:
    - the broader feature context
@@ -142,20 +159,20 @@ If there are any, `selected-variant.md` wins, change the `spec.md` to conform.
 
 8. **Complete the feature design**
 
-   Use `selected-variant.md`, optional `research.md`, Orchid docs, and code context together.
+   Use the authoritative requirements baseline, optional `research.md`, Orchid docs, and code context together.
 
    The design must:
-   - achieve the selected-variant goals
+   - achieve the authoritative requirements baseline goals
    - fill in any missing public API or high-level behavior needed to make the feature complete
    - define the public contract clearly enough to constrain implementation
    - decide whether the idea introduces no standalone capability, one standalone capability, or several distinct capabilities that deserve their own responsibility-centered feature folders
    - identify both direct capabilities and any additional enabling capabilities that other capabilities need in order to work, when those supporting mechanisms are generic and substantial enough to stand on their own
    - stay at the interface, behavior, and responsibility level rather than dictating low-level implementation
    - choose a coherent answer when an important design decision is still missing
-   - record important writer-made behavioral decisions in `## Assumptions` when the selected variant leaves a real gap that must be resolved
+   - record important writer-made behavioral decisions in `## Assumptions` when the authoritative requirements baseline leaves a real gap that must be resolved
 
    The design must not:
-   - merely restate the selected variant without completing the missing design around it
+   - merely restate the authoritative requirements baseline without completing the missing design around it
    - leave essential behavior ambiguous
    - overfit to one implementation strategy
    - drift away from existing Orchid naming, package boundaries, or user expectations without a strong reason
@@ -170,7 +187,7 @@ If there are any, `selected-variant.md` wins, change the `spec.md` to conform.
 
    `specs/<feature-name>/<NUMBER-idea-name>/spec.md`
 
-   If `spec.md` already exists, read it first, preserve still-correct content, remove stale content, and reconcile it with the current selected variant and current codebase reality.
+   If `spec.md` already exists, read it first, preserve still-correct content, remove stale content, and reconcile it with the current authoritative requirements baseline and current codebase reality.
    Do not append duplicate sections.
 
    The file must use this structure:
@@ -191,7 +208,7 @@ If there are any, `selected-variant.md` wins, change the `spec.md` to conform.
 
    ## Assumptions
 
-   - <Important behavioral decision the spec writer had to make because the selected variant left a real gap.>
+   - <Important behavioral decision the spec writer had to make because the authoritative requirements baseline left a real gap.>
    - <Another important assumption, only if needed.>
 
    ## Capabilities
@@ -248,7 +265,7 @@ If there are any, `selected-variant.md` wins, change the `spec.md` to conform.
    - Include as many code examples in `Summary` as needed to make every new public API or public workflow unambiguous.
    - If one example is enough, include one. If the design introduces multiple distinct public surfaces, include enough examples to cover all of them.
    - `What Changes` should be short, targeted, and complete for the proposed feature.
-   - Include `## Assumptions` only when the writer had to make important behavioral or scope decisions to fill real gaps in `selected-variant.md`, decisions that aren't already implied.
+   - Include `## Assumptions` only when the writer had to make important behavioral or scope decisions to fill real gaps in the authoritative requirements baseline, decisions that aren't already implied.
    - Only include assumptions that materially affect usability, behavior, or implementation scope.
    - Do not list interface naming choices, small API-shape preferences, or other minor clarifications as assumptions.
    - `Capabilities` must decide whether the design introduces no standalone capability, one standalone capability, or several capabilities that deserve their own feature folders.
@@ -299,18 +316,37 @@ The very top of `tasks.md` must start with one mandatory `0` task section before
 
 `## 0. read spec.md and guidelines`
 
-That `0` task must contain exactly two subtasks:
+That `0` task must contain exactly two numbered entries: `0.1` and `0.2`.
 
 - `0.1` must require reading `spec.md` before starting later tasks, explicitly include `spec.md` `## Detailed Design`, require following that design for every later task, and require the final implementation to match it exactly
 - `0.2` must require deciding whether any later task involves coding, and if it does, require reading and following every listed coding guideline and verifying that all produced code follows them to the letter
 
-Those `0.1` and `0.2` subtasks must be plain numbered list items without checkboxes. Checkbox task items begin only in later implementation sections such as `1.1`, `2.1`, and `3.1`.
+Those `0.1` and `0.2` entries must be plain list items without checkboxes, and their visible text must start with `0.1` and `0.2` respectively. Checkbox task items begin only in later implementation sections such as `1.1`, `2.1`, and `3.1`.
+The unnumbered guideline bullets that follow inside section `0` are required supporting lines, not extra subtasks.
 
 The guideline list under that `0` task must be the exact same guideline list that would otherwise have been emitted for this feature: always `guidelines/code.md`, plus every relevant nested `guidelines/code.md` for the directories that the implementation will change
 
 After the mandatory `0` section, the file must be split into valid implementation sections only: affected package sections and, when needed, one `docs` section for work under the repo root `docs/` folder.
 Package section titles must use the package folder names from `packages/<package-name>`. Root docs work must use the section title `docs`.
 Order the sections by implementation dependency order, with lower-level packages before downstream ones and the optional `docs` section placed where the work fits best, usually after code changes.
+
+Inside every later implementation section, each checkbox task item must itself own a nested subtask list:
+
+- the checkbox task line is the title of the change slice, not the implementation instruction itself
+- treat that checkbox line as the umbrella idea for the grouped work; mark it complete only when all of its nested subtasks are done
+- every checkbox task must have at least one nested subtask
+- nested subtasks must be indented plain list items without checkboxes, and their visible text must start with the task number as a prefix such as `1.1.1`, `1.1.2`, `2.3.1`, and so on
+- subtasks must stay high-level and responsibility-centered: more concrete than the checkbox title, but still clearly above file-by-file edits, helper-by-helper instructions, or literal test titles
+- one real actionable subtask is enough when the change slice is genuinely small; do not inflate the list with filler
+- for tasks that involve coding, append the four mandatory verification subtasks listed below at the end of that task's subtask list
+- for tasks that do not involve coding, such as repo-root docs-only work, do not append those coding-verification subtasks
+
+For every coding task, append these four verification subtasks to the end of its nested subtask list, after the change-specific subtasks. After the `1.1.3`-style numeric prefix, keep the wording exactly as follows:
+
+- verify if the implementation conforms to guidelines
+- make sure you didn't forget to cover the implementation with tests
+- make sure the package test and typecheck commands are passing (`pnpm <pkg> check` and `pnpm <pkg> types`; `<pkg>` is the folder name under `packages/`, not the `package.json` name)
+- ensure that if user-prompted implementation changes have a meaningful impact on the feature, `spec.md` was updated to reflect them
 
 Use this structure:
 
@@ -325,17 +361,39 @@ Use this structure:
 
 ## 1. pqb
 
-- [ ] 1.1 <task description>
-- [ ] 1.2 <task description>
+- [ ] 1.1 <title of the change slice>
+  - 1.1.1 <high-level actionable subtask>
+  - 1.1.2 <another high-level actionable subtask if needed>
+  - 1.1.3 verify if the implementation conforms to guidelines
+  - 1.1.4 make sure you didn't forget to cover the implementation with tests
+  - 1.1.5 make sure the package test and typecheck commands are passing (`pnpm <pkg> check` and `pnpm <pkg> types`; `<pkg>` is the folder name under `packages/`, not the `package.json` name)
+  - 1.1.6 ensure that if user-prompted implementation changes have a meaningful impact on the feature, `spec.md` was updated to reflect them
+- [ ] 1.2 <title of another change slice>
+  - 1.2.1 <high-level actionable subtask>
+  - 1.2.2 verify if the implementation conforms to guidelines
+  - 1.2.3 make sure you didn't forget to cover the implementation with tests
+  - 1.2.4 make sure the package test and typecheck commands are passing (`pnpm <pkg> check` and `pnpm <pkg> types`; `<pkg>` is the folder name under `packages/`, not the `package.json` name)
+  - 1.2.5 ensure that if user-prompted implementation changes have a meaningful impact on the feature, `spec.md` was updated to reflect them
 
 ## 2. orm
 
-- [ ] 2.1 <task description>
-- [ ] 2.2 <task description>
+- [ ] 2.1 <title of the change slice>
+  - 2.1.1 <high-level actionable subtask>
+  - 2.1.2 verify if the implementation conforms to guidelines
+  - 2.1.3 make sure you didn't forget to cover the implementation with tests
+  - 2.1.4 make sure the package test and typecheck commands are passing (`pnpm <pkg> check` and `pnpm <pkg> types`; `<pkg>` is the folder name under `packages/`, not the `package.json` name)
+  - 2.1.5 ensure that if user-prompted implementation changes have a meaningful impact on the feature, `spec.md` was updated to reflect them
+- [ ] 2.2 <title of another change slice>
+  - 2.2.1 <high-level actionable subtask>
+  - 2.2.2 verify if the implementation conforms to guidelines
+  - 2.2.3 make sure you didn't forget to cover the implementation with tests
+  - 2.2.4 make sure the package test and typecheck commands are passing (`pnpm <pkg> check` and `pnpm <pkg> types`; `<pkg>` is the folder name under `packages/`, not the `package.json` name)
+  - 2.2.5 ensure that if user-prompted implementation changes have a meaningful impact on the feature, `spec.md` was updated to reflect them
 
 ## 3. docs
 
-- [ ] 3.1 <task description for the repo root docs/ folder>
+- [ ] 3.1 <title of the docs change slice>
+  - 3.1.1 <high-level actionable docs subtask for the repo root docs/ folder>
 ```
 
 While writing `tasks.md`, keep this implementation-time rule in mind, but do not emit it as a separate section:
@@ -349,26 +407,38 @@ While writing `tasks.md`, keep this implementation-time rule in mind, but do not
 `tasks.md` requirements:
 
 - The file must start with the mandatory `## 0. read spec.md and guidelines` section before any package or `docs` sections.
-- That `0` section must contain exactly the `0.1` and `0.2` subtasks described above.
-- Those `0.1` and `0.2` subtasks must be plain numbered list items without checkboxes.
+- That `0` section must contain exactly the `0.1` and `0.2` numbered entries described above.
+- Those `0.1` and `0.2` entries must be plain list items without checkboxes, and their visible text must start with `0.1` and `0.2`.
 - `0.1` must require reading `spec.md`, explicitly include `spec.md` `## Detailed Design`, require following that design for every later task, and require the final implementation to match it exactly.
 - `0.2` must require checking whether any later task requires coding and, if so, reading and following the guideline list and verifying that all produced code follows it to the letter.
 - The guideline list in that `0` section must be the exact same list that would otherwise have been emitted for this feature: it must always include `- you must follow guidelines/code.md for coding`, and it must add one list item for each relevant nested `guidelines/code.md` file under a directory that will include feature implementation changes.
+- The guideline bullets in section `0` are supporting lines, not additional subtasks, so `0.1` and `0.2` remain the only numbered entries in that section.
 - Include only nested guideline files that are actually relevant to the planned code changes.
 - Example: if the feature will change query-builder code under `packages/pqb/src/query`, include `- you must follow packages/pqb/src/query/guidelines/code.md for coding`.
-- Each task must be one meaningful responsibility or change slice.
-- A single task may span multiple files.
+- After section `0`, every checkbox task must be a meaningful responsibility or change slice title, and it must own an indented nested numbered subtask list.
+- The checkbox task line must describe the main idea of the change slice, not a low-level implementation action.
+- A checkbox task is complete only when all of its nested subtasks are complete.
+- Every nested subtask must be a plain indented list item without a checkbox, and its visible text must start with the parent task number as a prefix such as `1.1.1`.
+- Each checkbox task must have at least one nested subtask. One actionable subtask is acceptable when the change slice is genuinely small.
+- Change-specific subtasks must stay high-level: more concrete than the checkbox title, but still above file-by-file edits, exact helper changes, or literal test-case names.
+- For every coding task, append these four verification subtasks at the end of its nested subtask list, using the exact wording listed below after the numeric prefix:
+  - verify if the implementation conforms to guidelines
+  - make sure you didn't forget to cover the implementation with tests
+  - make sure the package test and typecheck commands are passing (`pnpm <pkg> check` and `pnpm <pkg> types`; `<pkg>` is the folder name under `packages/`, not the `package.json` name)
+  - ensure that if user-prompted implementation changes have a meaningful impact on the feature, `spec.md` was updated to reflect them
+- Do not append those four coding-verification subtasks to non-coding tasks such as repo-root docs-only work.
+- A single checkbox task may span multiple files.
 - Do not split tasks by file unless the responsibilities are actually different.
 - If one requirement spans multiple packages, create a separate task in each affected package section.
 - After the mandatory `## 0. read spec.md and guidelines` section, only affected package sections and, when needed, one `docs` section for work under the repo root `docs/` folder are valid.
 - Use the `docs` section only for work in the repo root `docs/` folder. Keep package-local docs in the relevant package section.
 - Do not create empty package or `docs` sections.
-- Every task should say what needs to change and include the intent, constraint, or key idea when that is not obvious from the task title alone.
-- Tasks may mention likely code locations, exported functions, or docs pages when that helps orient the implementor.
+- Every checkbox task and its subtasks together should make it clear what needs to change and include the intent, constraint, or key idea when that is not obvious from the title alone.
+- Subtasks may mention likely code locations, exported functions, or docs pages when that helps orient the implementor.
 - Do not micromanage exact edits or turn tasks into file-by-file instructions.
 - Do not retell the whole design in every task.
-- Do not include test tasks.
-- Do not include instructions about what tests to write.
+- Do not create standalone test tasks.
+- Do not include instructions about exactly what tests to write; the only required test-related wording is the mandatory coding-task subtask about making sure coverage is not missing.
 - Do not include generic research tasks or vague cleanup tasks.
 - The sum of all tasks must implement the declared `Detailed Design`.
 
@@ -381,7 +451,11 @@ Verify that:
 - every important `What Changes` item is covered by at least one task
 - every declared capability is reflected in `Detailed Design` and covered by at least one task when capabilities are listed
 - `tasks.md` starts with the mandatory `## 0. read spec.md and guidelines` section, with `0.1` covering `spec.md` and `spec.md` `## Detailed Design`, and `0.2` covering coding-guideline reading, following, and produced-code verification
-- `0.1` and `0.2` are plain numbered list items without checkboxes, while later implementation tasks use checkbox items
+- `0.1` and `0.2` are plain list items without checkboxes whose visible text starts with `0.1` and `0.2`, while later implementation tasks use checkbox items
+- every later checkbox task has an indented numbered subtask list, and its checkbox title is the main idea of the change slice rather than the implementation instruction itself
+- every nested subtask uses the parent task number as a prefix, such as `1.1.1`, and remains high-level rather than collapsing into file-by-file microsteps
+- every coding task ends with the four mandatory verification subtasks, while non-coding tasks do not
+- the guideline bullets under section `0` are present but are not treated as extra subtasks
 - every guideline entry under that `0` section matches a directory that the design or tasks actually affect, and `guidelines/code.md` is always listed
 - every affected package in the design appears in `tasks.md`, and a `docs` section appears when the design includes work under the repo root `docs/` folder
 - the tasks are ordered so the change can be implemented iteratively
@@ -392,10 +466,10 @@ Verify that:
 Before finishing, verify:
 
 - the correct `specs/<feature-name>/<NUMBER-idea-name>` folder was chosen
-- `selected-variant.md` was read fully before writing
+- the authoritative requirements baseline was read fully before writing: `selected-variant.md` when it exists, otherwise the user prompt
 - only `research.md` was used from the parent feature folder
 - relevant Orchid docs and code were actually inspected
-- the final `spec.md` achieves the selected-variant goals
+- the final `spec.md` achieves the authoritative requirements baseline goals
 - the final `spec.md` has no top-level title and no banned sections
 - `Summary` includes enough code examples to cover every new public API or public workflow
 - `What Changes` is concise, targeted, and complete
@@ -405,19 +479,26 @@ Before finishing, verify:
 - `spec.md` does not include a `Guidelines` section
 - the design avoids runtime validations that merely duplicate TypeScript guarantees
 - `tasks.md` starts with the mandatory `## 0. read spec.md and guidelines` section before any package or `docs` sections
-- that `0` section contains exactly `0.1` and `0.2`, with `0.1` covering `spec.md` and `spec.md` `## Detailed Design`, and `0.2` covering coding-guideline reading, following, and produced-code verification
-- that `0.1` and `0.2` are plain numbered list items without checkboxes, while later implementation tasks use checkbox items
+- that `0` section contains exactly `0.1` and `0.2` as numbered entries, with `0.1` covering `spec.md` and `spec.md` `## Detailed Design`, and `0.2` covering coding-guideline reading, following, and produced-code verification
+- that `0.1` and `0.2` are plain list items without checkboxes whose visible text starts with `0.1` and `0.2`, while later implementation tasks use checkbox items
+- that the guideline bullets under section `0` are supporting lines rather than extra subtasks
+- every later checkbox task line is a responsibility-centered change title and has an indented nested numbered subtask list
+- every nested subtask uses numbering like `1.1.1`, stays high-level, and is more concrete than its parent checkbox title without becoming a microstep
+- every coding task ends with the four mandatory verification subtasks about guideline conformance, test coverage, package tests and type checks, and meaningful spec updates
+- non-coding tasks, such as repo-root docs-only tasks, do not include those coding-verification subtasks
 - that `0` section includes the guideline list with `guidelines/code.md` and every relevant nested `guidelines/code.md` for the directories the feature will change
 - `tasks.md` is grouped into valid implementation sections with the required numbering format: plain `0.1` and `0.2` list items in section `0`, then checkbox tasks for affected package sections and, when needed, `docs` for work under the repo root `docs/` folder
-- `tasks.md` contains no test tasks or test-writing instructions
+- `tasks.md` contains no standalone test tasks and no exact test-writing instructions beyond the mandatory per-coding-task coverage reminder
 - documentation work under the repo root `docs/`, if needed, uses a `docs` section, while package-local docs stay in the relevant package section
 - the combined tasks fully cover the final design
 
 **Guardrails**
 
-- Do not generate `spec.md` from `selected-variant.md` alone. Inspect Orchid docs and code first.
-- Do not ignore, weaken, or casually contradict the requirements in `selected-variant.md`; only extend the missing parts of the design that the selected variant implies but does not already define.
-- Do not ignore confirmed decisions recorded in `## Refinement`.
+- Do not generate `spec.md` from the authoritative requirements baseline alone. Inspect Orchid docs and code first.
+- If `selected-variant.md` exists, do not ignore, weaken, or casually contradict its requirements; only extend the missing parts of the design that it implies but does not already define.
+- If `selected-variant.md` does not exist, do not ignore, weaken, or casually contradict the user's prompt; preserve the prompt as the source of truth for the selected idea's requirements while completing the missing design.
+- Do not ignore confirmed decisions recorded in `## Refinement` when `selected-variant.md` exists.
+- Do not treat a missing `selected-variant.md` as a blocker for this command.
 - Do not add `Assumptions` for naming choices, small interface-shape preferences, or other minor details.
 - Do not read unrelated parent-folder files besides `research.md`.
 - Do not create a capability entry just by copying the selected idea or feature name without showing why that responsibility should exist on its own.
@@ -429,8 +510,13 @@ Before finishing, verify:
 - Do not let `spec.md` collapse into vague product language or expand into an implementation manual.
 - Do not put low-level algorithms, step-by-step coding instructions, or file-by-file edits into `spec.md`.
 - Do not put a `Guidelines` section into `spec.md`; put the mandatory guideline list only in the `## 0. read spec.md and guidelines` section of `tasks.md`.
-- Do not let `tasks.md` omit or weaken the mandatory `## 0. read spec.md and guidelines` section: `0.1` must require reading and following `spec.md` `## Detailed Design`, and `0.2` must require reading and following the applicable coding guidelines and verifying that all produced code follows them to the letter.
+- Do not let `tasks.md` omit or weaken the mandatory `## 0. read spec.md and guidelines` section: `0.1` and `0.2` must be the only numbered entries there, `0.1` must require reading and following `spec.md` `## Detailed Design`, and `0.2` must require reading and following the applicable coding guidelines and verifying that all produced code follows them to the letter.
 - Do not add checkbox markers to `0.1` or `0.2`; checkbox task items start only in later implementation sections.
+- Do not emit single-layer checkbox task lists after section `0`; every later checkbox task must own an indented numbered subtask list.
+- Do not turn the checkbox task line into the implementation instruction itself; it is the title of the change slice and should only be completable after all of its subtasks are done.
+- Do not let nested subtasks drift into file-by-file edits, helper extraction notes, literal test titles, or other microsteps.
+- Do not forget the four mandatory verification subtasks at the end of every coding task's subtask list.
+- Do not append those coding-verification subtasks to non-coding tasks.
 - Do not create arbitrary non-package sections in `tasks.md`; after `## 0. read spec.md and guidelines`, only affected package sections and the optional `docs` section for the repo root `docs/` folder are allowed.
-- Do not pad `tasks.md` with microsteps, tests, or generic busywork.
-- Ask a focused clarifying question only when folder or idea resolution is genuinely ambiguous.
+- Do not pad `tasks.md` with filler subtasks, standalone tests, or generic busywork.
+- Ask a focused clarifying question only when folder or idea resolution is genuinely ambiguous, or when `selected-variant.md` is missing and the prompt does not provide enough user-visible requirements to define the feature without inventing it from scratch.

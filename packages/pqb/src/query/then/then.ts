@@ -10,7 +10,7 @@ import { Column, ColumnsShape } from '../../columns';
 import { HookPurpose } from '../extra-features/hooks/hooks.sql';
 import { getValueKey } from '../basic-features/get/get-value-key';
 import {
-  AdapterBase,
+  Adapter,
   AfterCommitHook,
   QueryResult,
   SqlSessionState,
@@ -297,7 +297,7 @@ const beginSql: SingleSqlItem = { text: 'BEGIN' };
 
 const then = async (
   q: Query,
-  adapter: AdapterBase,
+  adapter: Adapter,
   state?: AsyncState,
   beforeHooks?: QueryBeforeHook[],
   afterHooks?: QueryAfterHook[],
@@ -842,7 +842,7 @@ const setCatchingSavepoint = (
  * because user might expect empty objects to be returned for an empty select.
  */
 const execQuery = (
-  adapter: AdapterBase,
+  adapter: Adapter,
   method: 'query' | 'arrays',
   sql: SingleSql,
   startingSavepoint: string | undefined,

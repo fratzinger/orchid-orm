@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { generateTimeStamp } from './new-migration';
 import { getMigrations } from '../migration/migrations-set';
-import { AdapterBase } from 'pqb/internal';
+import { Adapter } from 'pqb/internal';
 
 import { migrationsSchemaTableSql } from '../migration/migration.utils';
 
@@ -17,7 +17,7 @@ export const fileNamesToChangeMigrationIdMap = Object.fromEntries(
 );
 
 export const changeIds = async (
-  adapters: AdapterBase[],
+  adapters: Adapter[],
   config: RakeDbConfig,
   { format, digits = 4 }: { format: 'serial' | 'timestamp'; digits?: number },
 ) => {
@@ -150,7 +150,7 @@ export type RenameMigrationVersionsValue = [
 
 export const renameMigrationVersionsInDb = async (
   config: Pick<RakeDbConfig, 'migrationsTable'>,
-  adapter: AdapterBase,
+  adapter: Adapter,
   values: RenameMigrationVersionsValue[],
 ) => {
   await adapter.arrays(

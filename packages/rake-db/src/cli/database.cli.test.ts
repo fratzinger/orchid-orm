@@ -3,10 +3,8 @@ import {
   dropDatabaseCommand,
   resetDatabaseCommand,
 } from './database.cli';
-import {
-  PostgresJsAdapter,
-  PostgresJsTransactionAdapter,
-} from 'pqb/postgres-js';
+import { PostgresJsAdapter } from 'pqb/postgres-js';
+import { AdapterClass, TransactionAdapterClass } from 'pqb/internal';
 import { promptConfirm, promptText } from '../prompt';
 import {
   createDatabase,
@@ -49,16 +47,19 @@ const database = 'dbname';
 const owner = 'username';
 
 const makeAdapter = () => {
-  const adapter = new PostgresJsAdapter({
-    schema: 'common-schema',
+  const adapter = new AdapterClass({
+    driverAdapter: PostgresJsAdapter,
+    config: {
+      schema: 'common-schema',
+    },
   });
 
   adapter.getDatabase = () => database;
   adapter.getUser = () => owner;
 
-  jest.spyOn(adapter, 'reconfigure').mockImplementation(() => adapter);
+  jest.spyOn(adapter, 'clone').mockImplementation(() => adapter);
 
-  const tx = Object.create(adapter) as unknown as PostgresJsTransactionAdapter;
+  const tx = Object.create(adapter) as unknown as TransactionAdapterClass;
 
   asMock(jest.spyOn(adapter, 'transaction')).mockImplementation((fn) => fn(tx));
 
@@ -91,7 +92,7 @@ describe('create or drop database', () => {
       );
 
       for (const { adapter, tx } of items) {
-        expect(adapter.reconfigure).toHaveBeenCalledWith({
+        expect(adapter.clone).toHaveBeenCalledWith({
           database: 'postgres',
         });
 
@@ -153,7 +154,7 @@ describe('create or drop database', () => {
 
         expect(promptConfirm).toHaveBeenCalled();
 
-        expect(adapter.reconfigure).toHaveBeenCalledWith({
+        expect(adapter.clone).toHaveBeenCalledWith({
           user: 'admin',
           password: 'pw',
         });
@@ -163,7 +164,7 @@ describe('create or drop database', () => {
 
     it('should not close db if dontClose option is provided', async () => {
       jest
-        .spyOn(adapter, 'reconfigure')
+        .spyOn(adapter, 'clone')
         .mockImplementationOnce(() => makeAdapter().adapter);
 
       await createDatabaseCommand(adapters, config, true);
@@ -182,7 +183,7 @@ describe('create or drop database', () => {
       );
 
       for (const { adapter } of items) {
-        expect(adapter.reconfigure).toHaveBeenCalledWith({
+        expect(adapter.clone).toHaveBeenCalledWith({
           database: 'postgres',
         });
 
@@ -238,7 +239,7 @@ describe('create or drop database', () => {
 
         expect(promptConfirm).toHaveBeenCalled();
 
-        expect(adapter.reconfigure).toHaveBeenCalledWith({
+        expect(adapter.clone).toHaveBeenCalledWith({
           user: 'admin',
           password: 'pw',
         });
@@ -253,9 +254,7 @@ describe('create or drop database', () => {
       const adminAdapters = items.map(() => makeAdapter().adapter);
 
       items.forEach(({ adapter }, i) => {
-        jest
-          .spyOn(adapter, 'reconfigure')
-          .mockImplementation(() => adminAdapters[i]);
+        jest.spyOn(adapter, 'clone').mockImplementation(() => adminAdapters[i]);
       });
 
       await resetDatabaseCommand(

@@ -1,8 +1,5 @@
 import { logParamToLogObject, QueryLogObject } from '../log/log';
-import {
-  TransactionAdapterBase,
-  TransactionAfterCommitHook,
-} from '../../../adapters/adapter';
+import { Adapter, TransactionAfterCommitHook } from '../../../adapters/adapter';
 import {
   sqlSessionContextMergeStorageState,
   sqlSessionContextSetStorageOptions,
@@ -15,7 +12,7 @@ export type { SqlSessionState } from '../../../adapters/features/sql-session-con
 
 export interface AsyncState extends SqlSessionState {
   // Database adapter that is connected to a currently running transaction.
-  transactionAdapter?: TransactionAdapterBase;
+  transactionAdapter?: Adapter;
   // Number of transaction nesting.
   // Top transaction has id = 0, transaction inside of transaction will have id = 1, and so on.
   transactionId?: number;

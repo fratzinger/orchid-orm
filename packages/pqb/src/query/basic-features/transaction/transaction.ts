@@ -1,9 +1,9 @@
 import { Query } from '../../query';
 import {
+  Adapter,
   AdapterTransactionOptions,
   AfterCommitHook,
   AfterCommitStandaloneHook,
-  TransactionAdapterBase,
   TransactionAfterCommitHook,
 } from '../../../adapters/adapter';
 import { emptyArray, emptyObject } from '../../../utils';
@@ -15,7 +15,7 @@ import { AsyncState, processStorageOptions } from '../storage/storage';
 import { QuerySchema } from '../schema/schema';
 
 export interface AsyncTransactionState extends AsyncState {
-  transactionAdapter: TransactionAdapterBase;
+  transactionAdapter: Adapter;
   transactionId: number;
 }
 
@@ -289,7 +289,7 @@ export class QueryTransaction {
     const transactionId =
       state?.transactionId !== undefined ? state.transactionId + 1 : 0;
 
-    const callback = (transactionAdapter: TransactionAdapterBase) => {
+    const callback = (transactionAdapter: Adapter) => {
       if (log) log.afterQuery(sql, logData);
       if (log) logData = log.beforeQuery(commitSql);
 

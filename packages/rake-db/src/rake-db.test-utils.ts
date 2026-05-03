@@ -4,7 +4,7 @@ import {
   makeColumnTypes,
   DefaultSchemaConfig,
   defaultSchemaConfig,
-  AdapterBase,
+  Adapter,
   MaybeArray,
   noop,
   QueryLogger,
@@ -44,7 +44,7 @@ export const makeDb = (config?: Partial<RakeDbConfig>) => {
   const db = createMigrationInterface(
     {
       getSchema() {},
-    } as unknown as AdapterBase,
+    } as unknown as Adapter,
     true,
     dbConfig,
   ).getDb(dbConfig.columnTypes) as DbMigration<

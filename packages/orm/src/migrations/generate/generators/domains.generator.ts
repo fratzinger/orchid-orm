@@ -2,7 +2,7 @@ import { Column, RawSql } from 'pqb/internal';
 import {
   ArrayColumn,
   DbStructureDomainsMap,
-  AdapterBase,
+  Adapter,
   deepCompare,
   emptyArray,
   TemplateLiteralArgs,
@@ -45,7 +45,7 @@ export interface CodeDomain {
 
 export const processDomains = async (
   ast: RakeDbAst[],
-  adapter: AdapterBase,
+  adapter: Adapter,
   domainsMap: DbStructureDomainsMap,
   dbStructure: IntrospectedStructure,
   {

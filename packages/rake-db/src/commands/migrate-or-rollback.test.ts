@@ -13,13 +13,19 @@ import {
   pathToLog,
   DefaultColumnTypes,
   DefaultSchemaConfig,
+  AdapterClass,
 } from 'pqb/internal';
 import {
   ChangeCallback,
   createMigrationChangeFn,
   pushChange,
 } from '../migration/change';
-import { asMock, testAdapter, TestAdapter, useTestDatabase } from 'test-utils';
+import {
+  asMock,
+  testAdapter,
+  testDbOptions,
+  useTestDatabase,
+} from 'test-utils';
 import { testConfig } from '../rake-db.test-utils';
 import { getMigrations } from '../migration/migrations-set';
 import {
@@ -62,7 +68,7 @@ jest.mock('../migration/manage-migrated-versions', () => {
 
 describe('migrate-or-rollback', () => {
   const adapter = testAdapter;
-  const dbName = adapter.getDatabase();
+  const dbName = new URL(testDbOptions.databaseURL as string).pathname.slice(1);
   const config = { ...testConfig, log: true };
   let migrationFiles: { path: string; version: string; load(): void }[] = [];
   let migratedVersions: string[] = [];
@@ -263,7 +269,7 @@ describe('migrate-or-rollback', () => {
       pushChange({ fn: fn as never, config });
     };
 
-    const transactionSpy = jest.spyOn(TestAdapter.prototype, 'transaction');
+    const transactionSpy = jest.spyOn(AdapterClass.prototype, 'transaction');
 
     beforeAll(() => {
       asMock(queryLock).mockImplementation(noop);

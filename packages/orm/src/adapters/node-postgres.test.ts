@@ -1,5 +1,5 @@
-import { NodePostgresAdapter } from 'pqb/node-postgres';
 import { orchidORM } from './node-postgres';
+import { RecordUnknown } from 'pqb/index';
 
 describe('node-postgres', () => {
   it('should not pass `log` param to the driver', () => {
@@ -11,7 +11,9 @@ describe('node-postgres', () => {
       {},
     );
 
-    const adapter = db.$qb.adapterNotInTransaction as NodePostgresAdapter;
+    const adapter = db.$qb.adapterNotInTransaction as unknown as {
+      config: RecordUnknown;
+    };
     expect('log' in adapter.config).toBe(false);
   });
 });

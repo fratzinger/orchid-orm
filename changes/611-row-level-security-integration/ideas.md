@@ -16,21 +16,36 @@
 
 - A multi-tenant `project` table declares both read and write policies in one place, and migration generation keeps the database aligned when those rules change later.
 
-### 2. Run work inside an explicit RLS context
+### 2. Run work inside an explicit per-query RLS context
 
 - Why: Policies often depend on request-local tenant, user, JWT, or role values, and pooled connections make manual `SET LOCAL` usage easy to misuse.
-- Adds: A safe wrapper for reads, writes, relation queries, and hooks that all need the same role and settings for one request-scoped operation.
+- Adds: A safe wrapper for reads, writes, relation queries, and hooks that all need the same role and settings for one request-scoped operation, without requiring a long-running transaction.
 - How:
-  - Expose a callback-style helper that applies one role plus custom settings for a single safe operation scope.
-  - Make it compose with existing transaction APIs so request-local context does not leak across pooled connections.
-  - Make the call site explicit so users can see when code depends on RLS context instead of looking like an ordinary query.
+  - Expose an explicit helper such as `$withOptions` that stores role and custom settings in async local storage for the current application flow.
+  - Apply that role and settings around each individual query, restoring the previous values afterward so context does not leak across pooled connections.
+  - Keep the call site explicit so users can see when code depends on RLS context instead of looking like an ordinary query.
+  - Accept the trade-off that this adds extra queries per database operation, in exchange for avoiding one transaction per request and reducing pressure on the connection pool.
 - Depends on: None.
 
 **Use cases**:
 
-- A web request sets `app.tenant_id` and `app_user` once, then runs nested reads and writes inside one callback so every policy sees the same context without leaking it into the next request.
+- A web request sets `app.tenant_id` and `app_user` once with `$withOptions`, then runs nested reads and writes that each apply the same context on a per-query basis without holding a transaction open for the whole request.
 
-### 3. Keep RLS security boundaries visible
+### 3. Run work inside a transaction-level RLS context
+
+- Why: Some applications want to set role and config once at the start of a request, keep that context stable for all database work in the request, and avoid the overhead of reapplying it for every individual query.
+- Adds: A transaction-scoped RLS mode where all reads, writes, relation queries, and hooks run inside one transaction with the proper role and settings already applied.
+- How:
+  - Let users begin a transaction at the start of a request and configure one role plus custom settings for the lifetime of that transaction.
+  - Keep all app code in that request running through the transaction so every query sees the same RLS context automatically.
+  - Commit or roll back when the request finishes, making the transaction boundary the same boundary for RLS context.
+- Depends on: None.
+
+**Use cases**:
+
+- A web request starts a transaction, sets `app.tenant_id` and `app_user` once, runs all nested reads and writes through that transaction, and commits when the request completes.
+
+### 4. Keep RLS security boundaries visible
 
 - Why: RLS can look complete while still failing in practice if grants are missing, no policy exists yet, or tests run as roles that bypass policies.
 - Adds: An RLS workflow users can reason about without false confidence about what the database is enforcing.
@@ -47,20 +62,20 @@
 
 ## Valuables
 
-### 4. Support many-to-many relations without insecure gaps
+### 5. Support many-to-many relations without insecure gaps
 
 - Why: Implicit join tables are a recurring weak spot for tenant isolation, because the link table must obey the same row-level rules as the records it connects.
 - Adds: A clear path for relation helpers in RLS-heavy applications instead of forcing users to discover unsafe defaults after adoption.
 - How:
   - Let join tables participate in the same RLS declaration flow as ordinary tables, or
   - require an explicit through-table model when Orchid cannot guarantee safe implicit behavior.
-- Depends on: Declare RLS where tables are defined, Run work inside an explicit RLS context.
+- Depends on: Declare RLS where tables are defined, Run work inside an explicit per-query RLS context.
 
 **Use cases**:
 
 - A `project_users` join table follows the same tenant rules as `project` and `user`, or Orchid requires the application to model that join table explicitly instead of creating an insecure implicit table.
 
-### 5. Explain the Postgres edge cases Orchid will not hide
+### 6. Explain the Postgres edge cases Orchid will not hide
 
 - Why: Views, uniqueness checks, foreign keys, and expensive policy predicates can still surprise users even with first-class ORM support.
 - Adds: Guidance users can apply when policies look correct but behavior, security expectations, or performance still go wrong.

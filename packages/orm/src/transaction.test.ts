@@ -1,11 +1,9 @@
-import { noop } from 'pqb/internal';
+import { AdapterClass, noop, TransactionAdapterClass } from 'pqb/internal';
 import {
   db,
   line,
   ProfileData,
   ProfileSelectAll,
-  TestAdapter,
-  TestTransactionAdapter,
   UserData,
   UserSelectAll,
 } from 'test-utils';
@@ -17,8 +15,8 @@ describe('transaction', () => {
   it.each(['$transaction', '$ensureTransaction'] as const)(
     'should have override %s method which implicitly connects tables with a single transaction',
     async (method) => {
-      const transactionSpy = jest.spyOn(TestAdapter.prototype, 'transaction');
-      const querySpy = jest.spyOn(TestTransactionAdapter.prototype, 'query');
+      const transactionSpy = jest.spyOn(AdapterClass.prototype, 'transaction');
+      const querySpy = jest.spyOn(TransactionAdapterClass.prototype, 'query');
 
       expect(db.$isInTransaction()).toBe(false);
 

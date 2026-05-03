@@ -9,7 +9,7 @@ import {
   PostgresJsAdapterOptions,
   createDb as cdb,
 } from 'pqb/postgres-js';
-import { DbSharedOptions } from 'pqb/internal';
+import { DbSharedOptions, AdapterClass } from 'pqb/internal';
 
 export interface PostgresJsOrchidORMOptions
   extends PostgresJsAdapterOptions, DbSharedOptions {}
@@ -26,7 +26,10 @@ export const orchidORM = <T extends TableClasses>(
     {
       ...options,
       log,
-      adapter: new PostgresJsAdapter(options),
+      adapter: new AdapterClass({
+        driverAdapter: PostgresJsAdapter,
+        config: options,
+      }),
     },
     tables,
   );

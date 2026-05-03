@@ -11,7 +11,7 @@ import {
   TableData,
   TableDataFn,
   TableDataItem,
-  AdapterBase,
+  Adapter,
   ColumnSchemaConfig,
   emptyObject,
   MaybeArray,
@@ -94,11 +94,11 @@ export type ChangeTableCallback<CT> = (t: TableChanger<CT>) => TableChangeData;
 export type ColumnComment = { column: string; comment: string | null };
 
 // Database adapter methods to perform queries without logging
-export interface SilentQueries extends AdapterBase {
+export interface SilentQueries extends MigrationAdapter {
   // Query without logging
-  silentQuery: AdapterBase['query'];
+  silentQuery: Adapter['query'];
   // Query arrays without logging
-  silentArrays: AdapterBase['arrays'];
+  silentArrays: Adapter['arrays'];
 }
 
 // Combined queryable database instance and a migration interface
@@ -127,7 +127,7 @@ interface MigrationInterfaceResult {
  * @param config - config of `rakeDb`
  */
 export const createMigrationInterface = (
-  tx: AdapterBase,
+  tx: Adapter,
   up: boolean,
   config: Pick<RakeDbConfig, 'log' | 'logger'>,
 ): MigrationInterfaceResult => {
@@ -185,7 +185,7 @@ export const createMigrationInterface = (
   };
 };
 
-export type MigrationAdapter = AdapterBase;
+export type MigrationAdapter = Adapter;
 
 // Migration interface to use inside the `change` callback.
 export class Migration<CT = unknown> {

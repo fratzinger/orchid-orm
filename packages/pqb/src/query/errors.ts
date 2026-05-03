@@ -82,6 +82,7 @@ export abstract class QueryError<
   T extends PickQueryShape = PickQueryShape,
 > extends OrchidOrmInternalError {
   declare message: string;
+  declare length?: number;
   declare name: QueryErrorName;
   declare stack: string | undefined;
   code: string | undefined;

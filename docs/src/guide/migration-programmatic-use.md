@@ -41,12 +41,12 @@ migrator.run(
 
 [//]: # 'has JSDoc'
 
-To create a database, reconfigure the connection with a power user and an existing database to connect to.
+To create a database, use `clone` to change the connection settings with a power user and an existing database to connect to.
 
 ```ts
 import { createDatabase } from 'orchid-orm/migrations';
 
-const adapter = db.$getAdapter().reconfigure({
+const adapter = db.$getAdapter().clone({
   user: 'postgres',
   database: 'postgres',
 });
@@ -61,14 +61,14 @@ await createDatabase(adapter, {
 
 [//]: # 'has JSDoc'
 
-To drop a database, reconfigure the connection with a power user and a different database to connect to.
+To drop a database, use `clone` to change the connection with a power user and a different database to connect to.
 
 Ensure the connections to the database are closed before dropping, because Postgres won't be able to drop it otherwise.
 
 ```ts
 import { createDatabase } from 'orchid-orm/migrations';
 
-const adapter = db.$getAdapter().reconfigure({
+const adapter = db.$getAdapter().clone({
   user: 'postgres',
   database: 'postgres',
 });

@@ -22,7 +22,7 @@ import {
   ExpressionChain,
   SelectableOrExpression,
 } from './expressions/expression';
-import { AdapterBase, QueryResult } from '../adapters/adapter';
+import { Adapter, QueryResult } from '../adapters/adapter';
 import { HasHookSelect } from './basic-features/select/hook-select';
 import {
   MaybeArray,
@@ -137,7 +137,7 @@ export interface QueryData
     HasHookSelect,
     MutativeQueriesSelectRelationsQueryData {
   type: QueryType;
-  adapter: AdapterBase;
+  adapter: Adapter;
   shape: ColumnsShape;
   handleResult: HandleResult;
   // When executed in a transaction,

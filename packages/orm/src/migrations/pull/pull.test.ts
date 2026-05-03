@@ -2,10 +2,11 @@ import { pull } from './pull';
 import {
   DefaultColumnTypes,
   DefaultSchemaConfig,
-  AdapterBase,
+  Adapter,
   AdapterConfigBase,
   noop,
   getCallerFilePath,
+  AdapterClass,
 } from 'pqb/internal';
 import { testConfig } from '../migrations.test-utils';
 import { ChangeCallback, createMigrationInterface } from 'rake-db';
@@ -32,7 +33,7 @@ const options: AdapterConfigBase[] = [
   },
 ];
 
-let adapters: AdapterBase[] = [];
+let adapters: Adapter[] = [];
 let closers: (() => Promise<void>)[] = [];
 
 let prepareDbTransactionPromise: Promise<void> | undefined;
@@ -50,7 +51,9 @@ export const db = orchidORM({ databaseURL: 'url' }, {});
   prepareDb?: ChangeCallback<DefaultColumnTypes<DefaultSchemaConfig>>;
   dbFile?: string;
 }) => {
-  adapters = options.map((opts) => new TestAdapter(opts));
+  adapters = options.map(
+    (config) => new AdapterClass({ driverAdapter: TestAdapter, config }),
+  );
   closers = adapters.map((adapter) => () => adapter.close());
 
   const adapter = adapters[0];
@@ -61,8 +64,8 @@ export const db = orchidORM({ databaseURL: 'url' }, {});
         .transaction(
           (trx) =>
             new Promise<void>(async (_, rejectTransaction) => {
-              TestAdapter.prototype.query = (...args) => trx.query(...args);
-              TestAdapter.prototype.arrays = (...args) => trx.arrays(...args);
+              AdapterClass.prototype.query = (...args) => trx.query(...args);
+              AdapterClass.prototype.arrays = (...args) => trx.arrays(...args);
 
               // `generate` will attempt to close the adapter, but we need to keep it open in the test
               trx.close = noop as () => Promise<void>;
@@ -473,7 +476,14 @@ export const db = custom({ databaseURL: 'url' }, {
         });
 
         adapters = options.map(
-          (opts) => new TestAdapter({ ...opts, schema: 'schema' }),
+          (opts) =>
+            new AdapterClass({
+              driverAdapter: TestAdapter,
+              config: {
+                ...opts,
+                schema: 'schema',
+              },
+            }) as unknown as Adapter,
         );
 
         await pull(adapters, testConfig);

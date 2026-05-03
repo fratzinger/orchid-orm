@@ -1,5 +1,5 @@
 import {
-  AdapterBase,
+  Adapter,
   ColumnSchemaConfig,
   DefaultColumnTypes,
   DefaultSchemaConfig,
@@ -82,7 +82,7 @@ export const rakeDbCliWithAdapter = ((
       }
     },
   };
-}) as RakeDbFn<MaybeArray<AdapterBase>>;
+}) as RakeDbFn<MaybeArray<Adapter>>;
 
 export const setRakeDbCliRunFn = <T>(rakeDbCli: RakeDbFn<T>) => {
   rakeDbCli.run = (options, inputConfig, args) => {
@@ -98,7 +98,7 @@ export const setRakeDbCliRunFn = <T>(rakeDbCli: RakeDbFn<T>) => {
 setRakeDbCliRunFn(rakeDbCliWithAdapter);
 
 const runCommand = async (
-  adapters: AdapterBase[],
+  adapters: Adapter[],
   config: RakeDbConfig,
   args: string[],
 ) => {

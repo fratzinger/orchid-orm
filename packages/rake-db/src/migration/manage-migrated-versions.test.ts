@@ -8,7 +8,7 @@ import {
 import { SilentQueries } from './migration';
 import { testConfig } from '../rake-db.test-utils';
 import { RakeDbCtx } from '../common';
-import { AdapterBase } from 'pqb/internal';
+import { Adapter, AdapterClass, AdapterConfigBase } from 'pqb/internal';
 import { TestAdapter } from 'test-utils';
 import { createSchema, createTable } from '../commands/create-or-drop';
 
@@ -29,8 +29,9 @@ describe('manageMigratedVersions', () => {
   describe('createMigrationsTable', () => {
     const mockedQuery = jest.fn();
 
-    const db = new TestAdapter({
-      databaseURL: 'postgres://user:password@host:1234/db-name',
+    const db = new AdapterClass({
+      driverAdapter: TestAdapter,
+      config: { databaseURL: 'postgres://user:password@host:1234/db-name' },
     });
     db.query = mockedQuery;
 
@@ -74,9 +75,12 @@ describe('manageMigratedVersions', () => {
     });
 
     it('should create and use a schema set in the config', async () => {
-      const db = new TestAdapter({
-        databaseURL: 'postgres://user:password@host:1234/db-name',
-        schema: () => 'schema',
+      const db = new AdapterClass({
+        driverAdapter: TestAdapter,
+        config: {
+          databaseURL: 'postgres://user:password@host:1234/db-name',
+          schema: () => 'schema',
+        } as AdapterConfigBase,
       });
       db.query = mockedQuery;
 
@@ -161,11 +165,7 @@ describe('manageMigratedVersions', () => {
     const ctx: RakeDbCtx = {};
 
     const act = () =>
-      getMigratedVersionsMap(
-        ctx,
-        adapter as unknown as AdapterBase,
-        testConfig,
-      );
+      getMigratedVersionsMap(ctx, adapter as unknown as Adapter, testConfig);
 
     it('should throw NoMigrationsTableError if no migration table', async () => {
       adapter.arrays.mockRejectedValueOnce(

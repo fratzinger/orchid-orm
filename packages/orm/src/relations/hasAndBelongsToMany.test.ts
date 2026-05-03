@@ -1,5 +1,5 @@
 import { Db, Query } from 'pqb';
-import { omit, RecordUnknown } from 'pqb/internal';
+import { omit, RecordUnknown, TransactionAdapterClass } from 'pqb/internal';
 import {
   chatSelectAll,
   useRelationCallback,
@@ -12,7 +12,6 @@ import {
   assertType,
   expectSql,
   now,
-  TestTransactionAdapter,
   ChatData,
   UserData,
   UserSelectAll,
@@ -1049,9 +1048,9 @@ describe('hasAndBelongsToMany', () => {
         });
 
         jest.clearAllMocks();
-        const querySpy = jest.spyOn(TestTransactionAdapter.prototype, 'query');
+        const querySpy = jest.spyOn(TransactionAdapterClass.prototype, 'query');
         const arraysSpy = jest.spyOn(
-          TestTransactionAdapter.prototype,
+          TransactionAdapterClass.prototype,
           'arrays',
         );
 
@@ -1134,7 +1133,7 @@ describe('hasAndBelongsToMany', () => {
         });
 
         jest.clearAllMocks();
-        const querySpy = jest.spyOn(TestTransactionAdapter.prototype, 'query');
+        const querySpy = jest.spyOn(TransactionAdapterClass.prototype, 'query');
 
         const user = await q;
         await db.user
@@ -1196,9 +1195,9 @@ describe('hasAndBelongsToMany', () => {
         ]);
 
         jest.clearAllMocks();
-        const querySpy = jest.spyOn(TestTransactionAdapter.prototype, 'query');
+        const querySpy = jest.spyOn(TransactionAdapterClass.prototype, 'query');
         const arraysSpy = jest.spyOn(
-          TestTransactionAdapter.prototype,
+          TransactionAdapterClass.prototype,
           'arrays',
         );
 
@@ -1332,7 +1331,7 @@ describe('hasAndBelongsToMany', () => {
         ]);
 
         jest.clearAllMocks();
-        const querySpy = jest.spyOn(TestTransactionAdapter.prototype, 'query');
+        const querySpy = jest.spyOn(TransactionAdapterClass.prototype, 'query');
 
         await q;
 
@@ -1439,9 +1438,9 @@ describe('hasAndBelongsToMany', () => {
         });
 
         jest.clearAllMocks();
-        const querySpy = jest.spyOn(TestTransactionAdapter.prototype, 'query');
+        const querySpy = jest.spyOn(TransactionAdapterClass.prototype, 'query');
         const arraysSpy = jest.spyOn(
-          TestTransactionAdapter.prototype,
+          TransactionAdapterClass.prototype,
           'arrays',
         );
 
@@ -1598,9 +1597,9 @@ describe('hasAndBelongsToMany', () => {
         ]);
 
         jest.clearAllMocks();
-        const querySpy = jest.spyOn(TestTransactionAdapter.prototype, 'query');
+        const querySpy = jest.spyOn(TransactionAdapterClass.prototype, 'query');
         const arraysSpy = jest.spyOn(
-          TestTransactionAdapter.prototype,
+          TransactionAdapterClass.prototype,
           'arrays',
         );
 

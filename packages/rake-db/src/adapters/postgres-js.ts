@@ -1,5 +1,5 @@
 import { PostgresJsAdapter, PostgresJsAdapterOptions } from 'pqb/postgres-js';
-import { MaybeArray, toArray } from 'pqb/internal';
+import { AdapterClass, MaybeArray, toArray } from 'pqb/internal';
 import {
   rakeDbCliWithAdapter,
   RakeDbFn,
@@ -16,9 +16,12 @@ export const rakeDb = ((inputConfig, args = process.argv.slice(2)) => {
   return {
     ...rakeDb,
     run(options) {
-      const adapters = toArray(options).map(
-        (opts) => new PostgresJsAdapter(opts),
-      );
+      const adapters = toArray(options).map((config) => {
+        return new AdapterClass({
+          driverAdapter: PostgresJsAdapter,
+          config,
+        });
+      });
       return rakeDb.run(adapters);
     },
   };

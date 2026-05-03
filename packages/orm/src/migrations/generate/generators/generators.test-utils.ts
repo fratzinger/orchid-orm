@@ -4,11 +4,12 @@ import {
   DefaultSchemaConfig,
   TableDataFn,
   TableDataItem,
-  AdapterBase,
+  Adapter,
   emptyArray,
   MaybeArray,
   noop,
   Column,
+  AdapterClass,
 } from 'pqb/internal';
 import {
   ChangeCallback,
@@ -42,8 +43,10 @@ const defaultOptions = [
 ];
 let options = defaultOptions;
 
-const makeAdapters = (): AdapterBase[] => {
-  return options.map((opts) => new TestAdapter(opts));
+const makeAdapters = (): Adapter[] => {
+  return options.map(
+    (config) => new AdapterClass({ driverAdapter: TestAdapter, config }),
+  );
 };
 
 let adapters = makeAdapters();
@@ -52,7 +55,7 @@ let config: RakeDbConfig = testConfig;
 
 let prepareDbTransactionPromise: Promise<void> | undefined;
 let resolvePrepareDbTransaction: ((err: Error) => void) | undefined;
-let arrangedAdapters: AdapterBase[] | undefined;
+let arrangedAdapters: Adapter[] | undefined;
 
 const rollbackError = new Error('Rollback');
 

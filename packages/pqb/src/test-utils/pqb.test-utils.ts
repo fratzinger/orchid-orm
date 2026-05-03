@@ -1,8 +1,9 @@
 import { Query } from '../query/query';
 import { escapeForLog } from '../quote';
-import { expectSql, testDb, TestTransactionAdapter } from 'test-utils';
+import { expectSql, testDb } from 'test-utils';
 import { RecordUnknown } from '../utils';
 import { quoteTableWithSchema } from '../query/sql/sql';
+import { TransactionAdapterClass } from '../adapters/adapter';
 
 export type UserRecord = typeof User.outputType;
 export type UserInsert = typeof User.inputType;
@@ -199,15 +200,15 @@ export const emulateReturnNoRowsOnce = (
   method: 'query' | 'arrays' = 'query',
 ) => {
   // emulate the edge case when first query doesn't find the record, and then in CTE it appears
-  const query = TestTransactionAdapter.prototype[method];
-  TestTransactionAdapter.prototype[method] = async function (
+  const query = TransactionAdapterClass.prototype[method];
+  TransactionAdapterClass.prototype[method] = async function (
     this: unknown,
     text: string,
     values?: unknown[],
   ) {
     const result = await query.call(this, text, values);
     result.rowCount = 0;
-    TestTransactionAdapter.prototype[method] = query as never;
+    TransactionAdapterClass.prototype[method] = query as never;
     return result;
   } as never;
 };

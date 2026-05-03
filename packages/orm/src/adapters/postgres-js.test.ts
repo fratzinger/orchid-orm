@@ -1,5 +1,5 @@
-import { PostgresJsAdapter } from 'pqb/postgres-js';
 import { orchidORM } from './postgres-js';
+import { RecordUnknown } from 'pqb/index';
 
 describe('postgres-js', () => {
   it('should not pass `log` param to the driver', () => {
@@ -11,7 +11,9 @@ describe('postgres-js', () => {
       {},
     );
 
-    const adapter = db.$qb.adapterNotInTransaction as PostgresJsAdapter;
+    const adapter = db.$qb.adapterNotInTransaction as unknown as {
+      config: RecordUnknown;
+    };
     expect('log' in adapter.config).toBe(false);
   });
 });

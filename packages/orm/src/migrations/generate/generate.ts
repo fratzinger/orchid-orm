@@ -1,5 +1,5 @@
 import {
-  AdapterBase,
+  Adapter,
   PickQueryShape,
   toCamelCase,
   ArrayColumn,
@@ -53,7 +53,7 @@ export interface CodeItems {
 }
 
 interface AfterPull {
-  adapter: AdapterBase;
+  adapter: Adapter;
   version: string;
 }
 
@@ -64,7 +64,7 @@ export interface DbInstance {
 export class AbortSignal extends Error {}
 
 export const generate = async (
-  adapters: AdapterBase[],
+  adapters: Adapter[],
   config: RakeDbConfig,
   args: string[],
   afterPull?: AfterPull,
@@ -232,7 +232,7 @@ const getDbFromConfig = async (
 };
 
 const migrateAndPullStructures = async (
-  adapters: AdapterBase[],
+  adapters: Adapter[],
   config: RakeDbConfig,
   roles?: { whereSql?: string },
   defaultPrivileges?: { loadDefaultPrivileges?: boolean },
@@ -525,6 +525,6 @@ const processHasAndBelongsToManyColumn = (
   return;
 };
 
-const closeAdapters = (adapters: AdapterBase[]) => {
+const closeAdapters = (adapters: Adapter[]) => {
   return Promise.all(adapters.map((x) => x.close()));
 };

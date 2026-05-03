@@ -4,7 +4,7 @@ import {
   FromResult,
   QueryLogOptions,
   StorageOptions,
-  AdapterBase,
+  Adapter,
   AsyncState,
   defaultSchemaConfig,
   DbSharedOptions,
@@ -62,7 +62,7 @@ interface OrchidORMMethods {
    */
   $afterCommit: typeof afterCommit;
   $qb: Db;
-  $adapterNotInTransaction: AdapterBase;
+  $adapterNotInTransaction: Adapter;
 
   /**
    * Adapter is a wrapper on top of `postgres-js`, `node-postgres`, or other db driver.
@@ -72,7 +72,7 @@ interface OrchidORMMethods {
    *
    * Treat the adapter as implementation detail and avoid accessing it directly.
    */
-  $getAdapter(): AdapterBase;
+  $getAdapter(): Adapter;
 
   /**
    * Use `$query` to perform raw SQL queries.
@@ -209,9 +209,7 @@ export const orchidORMWithAdapter = <T extends TableClasses>(
     noPrimaryKey = 'error',
     schema,
     ...options
-  }: OrchidOrmParam<
-    ({ db: Query } | { adapter: AdapterBase }) & DbSharedOptions
-  >,
+  }: OrchidOrmParam<({ db: Query } | { adapter: Adapter }) & DbSharedOptions>,
   tables: T,
 ): OrchidORM<T> => {
   const commonOptions: QueryLogOptions & {
@@ -224,7 +222,7 @@ export const orchidORMWithAdapter = <T extends TableClasses>(
     noPrimaryKey,
   };
 
-  let adapter: AdapterBase;
+  let adapter: Adapter;
   let asyncStorage;
   let qb: Db;
   if ('db' in options) {
@@ -298,7 +296,7 @@ export const orchidORMWithAdapter = <T extends TableClasses>(
     };
 
     const dbTable = new Db(
-      adapter,
+      adapter as Adapter,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       qb as any,
       table.table,

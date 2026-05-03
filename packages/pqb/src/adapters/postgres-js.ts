@@ -1,36 +1,19 @@
-import postgres, { Error, Row, RowList, TransactionSql } from 'postgres';
+import postgres, { Row, RowList, TransactionSql } from 'postgres';
 import {
-  AdapterBase,
   AdapterConfigBase,
-  emptyObject,
   MaybeArray,
   QueryArraysResult,
   QueryResult,
   QueryResultRow,
   returnArg,
-  setConnectRetryConfig,
-  wrapAdapterFnWithConnectRetry,
   DbOptions,
   DefaultColumnTypes,
   DefaultSchemaConfig,
   DbResult,
   ColumnSchemaConfig,
-  TransactionAdapterBase,
-  TransactionArgs,
-  RecordStringOrNumber,
 } from 'pqb/internal';
-import { QueryError, createDbWithAdapter, QuerySchema } from 'pqb';
-import {
-  getResetLocalsSql,
-  getSetLocalsSql,
-  getTransactionArgs,
-  mergeLocals,
-} from './adapter.utils';
-import { SqlSessionState } from './adapter';
-import {
-  sqlSessionContextComputeSetup,
-  sqlSessionContextExecute,
-} from './features/sql-session-context';
+import { createDbWithAdapter, QuerySchema } from 'pqb';
+import { AdapterClass, DriverAdapter } from './adapter';
 
 export interface CreatePostgresJsDbOptions<
   SchemaConfig extends ColumnSchemaConfig,
@@ -46,15 +29,17 @@ export const createDb = <
 ): DbResult<ColumnTypes> => {
   return createDbWithAdapter({
     ...options,
-    adapter: new PostgresJsAdapter(options as never),
+    adapter: new AdapterClass({
+      driverAdapter: PostgresJsAdapter,
+      config: options,
+    }),
   });
 };
 
 export interface PostgresJsAdapterOptions
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  extends postgres.Options<any>, AdapterConfigBase {
+  extends postgres.Options<any>, Omit<AdapterConfigBase, 'searchPath' | 'ssl'> {
   databaseURL?: string;
-  searchPath?: string;
   schema?: QuerySchema;
 }
 
@@ -123,517 +108,120 @@ const types: Record<string, Partial<postgres.PostgresType>> = {
   },
 };
 
-export class PostgresJsAdapter implements AdapterBase {
-  sql: postgres.Sql;
-  searchPath?: string;
-  config: PostgresJsAdapterOptions;
-  errorClass = postgres.PostgresError;
-  locals: RecordStringOrNumber;
-  private wrappedWithConnectRetry?: boolean;
+export const PostgresJsAdapter: DriverAdapter = {
+  manualPool: false,
 
-  constructor(config: PostgresJsAdapterOptions) {
-    this.config = { ...config, types };
-    this.sql = this.configure(config);
-    this.locals = config.searchPath
-      ? {
-          search_path: config.searchPath,
-        }
-      : emptyObject;
-  }
+  errorClass: postgres.PostgresError,
+  errorFields: {
+    message: 'message',
+    severity: 'severity',
+    code: 'code',
+    detail: 'detail',
+    schema: 'schema_name',
+    table: 'table_name',
+    constraint: 'constraint_name',
+    hint: 'hint',
+    position: 'position',
+    where: 'where',
+    file: 'file',
+    line: 'line',
+    routine: 'routine',
+  },
 
-  isInTransaction(): boolean {
-    return false;
-  }
+  configure(params: PostgresJsAdapterOptions): postgres.Sql {
+    const config: PostgresJsAdapterOptions = { ...params, types };
 
-  private configure(config: PostgresJsAdapterOptions): postgres.Sql {
-    this.searchPath = config.searchPath;
-    if (this.searchPath) {
-      this.config.connection = {
+    if (config.locals?.search_path) {
+      config.connection = {
         ...config.connection,
-        search_path: this.searchPath,
+        search_path: config.locals.search_path,
       };
     }
 
     let sql;
-    if (this.config.databaseURL) {
-      const urlString = this.config.databaseURL;
-      const url = new URL(urlString);
-
-      const ssl = url.searchParams.get('ssl');
-      if (ssl === 'false' || ssl === 'true') {
-        this.config.ssl = ssl === 'true';
-      }
-
-      const searchPath = url.searchParams.get('searchPath');
-      if (searchPath) {
-        this.searchPath = searchPath;
-        url.searchParams.delete('searchPath');
-        this.config.connection = {
-          ...config.connection,
-          search_path: searchPath,
-        };
-      }
-
-      sql = postgres(url.toString(), this.config);
+    if (config.databaseURL) {
+      sql = postgres(config.databaseURL, config);
     } else {
-      sql = postgres(this.config);
-    }
-
-    if (config.connectRetry) {
-      setConnectRetryConfig(
-        this,
-        config.connectRetry === true ? emptyObject : config.connectRetry,
-      );
-
-      if (!this.wrappedWithConnectRetry) {
-        this.query = wrapAdapterFnWithConnectRetry(this, this.query);
-        this.arrays = wrapAdapterFnWithConnectRetry(this, this.arrays);
-        this.wrappedWithConnectRetry = true;
-      }
+      sql = postgres(config);
     }
 
     return sql;
-  }
+  },
 
-  private getURL(): URL | undefined {
-    return this.config.databaseURL
-      ? new URL(this.config.databaseURL)
-      : undefined;
-  }
-
-  private replaceSql(config: PostgresJsAdapterOptions): Promise<void> {
-    const { sql } = this;
-    // Swap the client before ending the old one so the adapter remains reusable
-    this.sql = this.configure(config);
-    return sql.end();
-  }
-
-  async updateConfig(config: PostgresJsAdapterOptions): Promise<void> {
-    await this.replaceSql({ ...this.config, ...config });
-  }
-
-  reconfigure(params: {
-    database?: string;
-    user?: string;
-    password?: string;
-    searchPath?: string;
-  }): AdapterBase {
-    const url = this.getURL();
-    if (url) {
-      if ('database' in params) {
-        url.pathname = `/${params.database}`;
-      }
-
-      if (params.user !== undefined) {
-        url.username = params.user;
-      }
-
-      if (params.password !== undefined) {
-        url.password = params.password;
-      }
-
-      if (params.searchPath !== undefined) {
-        url.searchParams.set('searchPath', params.searchPath);
-      }
-
-      return new PostgresJsAdapter({
-        ...this.config,
-        databaseURL: url.toString(),
-      });
-    } else {
-      return new PostgresJsAdapter({ ...this.config, ...params });
-    }
-  }
-
-  getDatabase(): string {
-    const url = this.getURL();
-    return url ? url.pathname.slice(1) : (this.config.database as string);
-  }
-
-  getUser(): string {
-    const url = this.getURL();
-    return url ? url.username : (this.config.user as string);
-  }
-
-  getSearchPath(): string | undefined {
-    return this.searchPath;
-  }
-
-  getHost(): string {
-    const url = this.getURL();
-    return url ? url.hostname : (this.config.host as string);
-  }
-
-  getSchema(): QuerySchema | undefined {
-    return this.config.schema;
-  }
-
-  query<T extends QueryResultRow = QueryResultRow>(
+  queryClient<T extends QueryResultRow = QueryResultRow>(
+    client: TransactionSql,
     text: string,
     values?: unknown[],
+    // only has effect in a transaction
     startingSavepoint?: string,
     releasingSavepoint?: string,
-    sqlSessionState?: SqlSessionState,
+    // SQL session state (role and setConfig) from async storage
+    arraysMode?: boolean,
   ): Promise<QueryResult<T>> {
-    return queryWithSqlSession(
-      this.sql,
-      text,
-      values,
-      sqlSessionState,
-      startingSavepoint,
-      releasingSavepoint,
-      false,
-      true,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let query = client.unsafe(text, values as never) as any;
+
+    if (arraysMode) query = query.values();
+
+    if (!startingSavepoint && !releasingSavepoint) {
+      return query.then(wrapResult);
+    }
+
+    return Promise.all([
+      startingSavepoint && client.unsafe(`SAVEPOINT "${startingSavepoint}"`),
+      query,
+      releasingSavepoint &&
+        client.unsafe(`RELEASE SAVEPOINT "${releasingSavepoint}"`),
+    ]).then(
+      (results: RawResult[]) => {
+        return wrapResult(results[1]);
+      },
+      (err) => {
+        if (!releasingSavepoint) {
+          throw err;
+        }
+
+        return client
+          .unsafe(`ROLLBACK TO SAVEPOINT "${releasingSavepoint}"`)
+          .then(() => {
+            throw err;
+          });
+      },
     );
-  }
+  },
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  arrays<R extends any[] = any[]>(
-    text: string,
-    values?: unknown[],
-    startingSavepoint?: string,
-    releasingSavepoint?: string,
-    sqlSessionState?: SqlSessionState,
-  ): Promise<QueryArraysResult<R>> {
-    return queryWithSqlSession(
-      this.sql,
-      text,
-      values,
-      sqlSessionState,
-      startingSavepoint,
-      releasingSavepoint,
-      true,
-      true,
-    ) as Promise<QueryArraysResult<R>>;
-  }
+  borrow(client: postgres.Sql): Promise<postgres.ReservedSql> {
+    return client.reserve();
+  },
 
-  async transaction<Result>(...args: TransactionArgs<Result>): Promise<Result> {
+  release(client: postgres.ReservedSql): void {
+    client.release();
+  },
+
+  begin<DriverClient, Result>(
+    client: postgres.Sql,
+    cb: (adapter: DriverClient) => Promise<Result>,
+    options?: string,
+  ): Promise<Result> {
     let ok: boolean | undefined;
     let result: unknown;
 
-    const { cb, options } = getTransactionArgs(args);
-
-    const fn = (sql: TransactionSql) => {
-      // Apply transaction-scoped SQL session state (role and setConfig) once at transaction start
-      if (options?.sqlSessionState) {
-        const { role, setConfig } = options.sqlSessionState;
-        if (role) {
-          sql.unsafe(`SET ROLE ${role}`).execute();
-        }
-        if (setConfig && Object.keys(setConfig).length > 0) {
-          const setExpressions = Object.entries(setConfig)
-            .map(
-              ([key, value]) =>
-                `set_config('${key.replace(/'/g, "''")}', '${typeof value === 'string' ? value.replace(/'/g, "''") : value}', true)`,
-            )
-            .join(', ');
-          sql.unsafe(`SELECT ${setExpressions}`).execute();
-        }
-      }
-
-      const localsSql = getSetLocalsSql(options);
-      if (localsSql) {
-        sql.unsafe(localsSql).execute();
-      }
-
-      const locals = mergeLocals(this.locals, options);
-
-      return cb(
-        new PostgresJsTransactionAdapter(this, sql as never, this, locals),
-      ).then((res) => {
+    const fn = (sql: TransactionSql): Promise<Result> =>
+      cb(sql as DriverClient).then((res) => {
         ok = true;
         return (result = res);
       });
-    };
 
-    return (
-      options?.options
-        ? this.sql.begin(options.options, fn)
-        : this.sql.begin(fn)
-    ).catch((err) => {
-      if (ok) return result;
+    return (options ? client.begin(options, fn) : client.begin(fn)).catch(
+      (err) => {
+        if (ok) return result;
 
-      throw err;
-    }) as never;
-  }
-
-  close(): Promise<void> {
-    return this.replaceSql(this.config);
-  }
-
-  assignError(to: QueryError, dbError: Error) {
-    const from = dbError as postgres.PostgresError;
-    to.message = from.message;
-    to.severity = from.severity;
-    to.code = from.code;
-    to.detail = from.detail;
-    to.schema = from.schema_name;
-    to.table = from.table_name;
-    to.constraint = from.constraint_name;
-    to.hint = from.hint;
-    to.position = from.position;
-    to.where = from.where;
-    to.file = from.file;
-    to.line = from.line;
-    to.routine = from.routine;
-  }
-}
-
-const query = <T extends QueryResultRow = QueryResultRow>(
-  sql: postgres.Sql,
-  text: string,
-  values?: unknown[],
-  startingSavepoint?: string,
-  releasingSavepoint?: string,
-  arrays?: boolean,
-): Promise<QueryResult<T>> => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let query = sql.unsafe(text, values as never) as any;
-
-  if (arrays) query = query.values();
-
-  if (!startingSavepoint && !releasingSavepoint) {
-    return query.then(wrapResult);
-  }
-
-  return Promise.all([
-    startingSavepoint && sql.unsafe(`SAVEPOINT "${startingSavepoint}"`),
-    query,
-    releasingSavepoint &&
-      sql.unsafe(`RELEASE SAVEPOINT "${releasingSavepoint}"`),
-  ]).then(
-    (results: RawResult[]) => {
-      return wrapResult(results[1]);
-    },
-    (err) => {
-      if (!releasingSavepoint) {
         throw err;
-      }
+      },
+    ) as never;
+  },
 
-      return sql
-        .unsafe(`ROLLBACK TO SAVEPOINT "${releasingSavepoint}"`)
-        .then(() => {
-          throw err;
-        });
-    },
-  );
+  close(client: postgres.Sql): Promise<void> {
+    return client.end();
+  },
 };
-
-// Execute query with SQL session state setup/cleanup
-// For non-transactional queries: reserves a connection (borrowConnection=true)
-// For transactional queries: uses existing connection (borrowConnection=false)
-const queryWithSqlSession = async <T extends QueryResultRow = QueryResultRow>(
-  sql: postgres.Sql,
-  text: string,
-  values: unknown[] | undefined,
-  sessionState: SqlSessionState | undefined,
-  startingSavepoint: string | undefined,
-  releasingSavepoint: string | undefined,
-  arraysMode: boolean,
-  borrowConnection = false,
-): Promise<QueryResult<T>> => {
-  const setup = sqlSessionContextComputeSetup(sessionState);
-
-  if (!setup) {
-    return query(
-      sql,
-      text,
-      values,
-      startingSavepoint,
-      releasingSavepoint,
-      arraysMode,
-    );
-  }
-
-  const connection = borrowConnection ? await sql.reserve() : sql;
-
-  const queryFn = async (sqlStr: string, vals?: unknown[]) => {
-    const result = await connection.unsafe(sqlStr, vals as never).values();
-    return {
-      rows: result,
-      rowCount: result.length,
-      fields: [],
-    } as QueryResult<QueryResultRow>;
-  };
-
-  const releaseFn = borrowConnection
-    ? async () => {
-        await (connection as postgres.ReservedSql).release();
-      }
-    : undefined;
-
-  const mainQuery = () =>
-    query<T>(
-      connection,
-      text,
-      values,
-      startingSavepoint,
-      releasingSavepoint,
-      arraysMode,
-    );
-
-  return sqlSessionContextExecute<T>(queryFn, setup, mainQuery, releaseFn);
-};
-
-export class PostgresJsTransactionAdapter implements TransactionAdapterBase {
-  errorClass = postgres.PostgresError;
-
-  constructor(
-    public adapter: PostgresJsAdapter,
-    public sql: postgres.Sql,
-    public parent: AdapterBase,
-    public locals: RecordStringOrNumber,
-  ) {}
-
-  isInTransaction(): true {
-    return true;
-  }
-
-  updateConfig(config: PostgresJsAdapterOptions): Promise<void> {
-    return this.adapter.updateConfig(config);
-  }
-
-  reconfigure(params: {
-    database?: string;
-    user?: string;
-    password?: string;
-    searchPath?: string;
-  }): AdapterBase {
-    return this.adapter.reconfigure(params);
-  }
-
-  getDatabase(): string {
-    return this.adapter.getDatabase();
-  }
-
-  getUser(): string {
-    return this.adapter.getUser();
-  }
-
-  getSearchPath(): string | undefined {
-    return this.adapter.searchPath;
-  }
-
-  getHost(): string {
-    return this.adapter.getHost();
-  }
-
-  getSchema(): QuerySchema | undefined {
-    return this.adapter.getSchema();
-  }
-
-  query<T extends QueryResultRow = QueryResultRow>(
-    text: string,
-    values?: unknown[],
-    startingSavepoint?: string,
-    releasingSavepoint?: string,
-    sqlSessionState?: SqlSessionState,
-  ): Promise<QueryResult<T>> {
-    return queryWithSqlSession(
-      this.sql,
-      text,
-      values,
-      sqlSessionState,
-      startingSavepoint,
-      releasingSavepoint,
-      false,
-      false,
-    );
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  arrays<R extends any[] = any[]>(
-    text: string,
-    values: unknown[] | undefined,
-    startingSavepoint?: string | undefined,
-    releasingSavepoint?: string | undefined,
-    sqlSessionState?: SqlSessionState,
-  ): Promise<QueryArraysResult<R>> {
-    return queryWithSqlSession(
-      this.sql,
-      text,
-      values,
-      sqlSessionState,
-      startingSavepoint,
-      releasingSavepoint,
-      true,
-      false,
-    ) as Promise<QueryArraysResult<R>>;
-  }
-
-  async transaction<Result>(...args: TransactionArgs<Result>): Promise<Result> {
-    const { cb, options } = getTransactionArgs(args);
-
-    // For nested transactions with SQL session state, capture outer transaction-local values
-    let capturedRole: string | undefined;
-    const capturedConfigs: Record<string, string | null> = {};
-    const sqlSession = options?.sqlSessionState;
-
-    if (sqlSession) {
-      // Capture current role if we're going to override it
-      if (sqlSession.role) {
-        const roleResult = await this.query<{ role: string }>(
-          'SELECT current_role as role',
-        );
-        capturedRole = roleResult.rows[0].role;
-      }
-
-      // Capture current config values for keys we're going to override
-      if (
-        sqlSession.setConfig &&
-        Object.keys(sqlSession.setConfig).length > 0
-      ) {
-        for (const key of Object.keys(sqlSession.setConfig)) {
-          const configResult = await this.query<{ val: string | null }>(
-            `SELECT current_setting('${key.replace(/'/g, "''")}', true) as val`,
-          );
-          capturedConfigs[key] = configResult.rows[0].val;
-        }
-      }
-    }
-
-    const localsSql = getSetLocalsSql(options);
-    if (localsSql) {
-      this.sql.unsafe(localsSql).execute();
-    }
-
-    const locals = mergeLocals(this.locals, options);
-
-    let res: Result;
-    try {
-      res = (await cb(
-        new PostgresJsTransactionAdapter(this.adapter, this.sql, this, locals),
-      )) as Result;
-    } finally {
-      // Restore outer transaction-local values after nested transaction completes
-      if (sqlSession) {
-        if (capturedRole !== undefined) {
-          await this.query(`SET ROLE ${capturedRole}`);
-        }
-
-        for (const [key, value] of Object.entries(capturedConfigs)) {
-          // Reset to empty string if previously unset (null), otherwise restore previous value
-          const restoreValue = value === null ? '' : value;
-          await this.query(
-            `SELECT set_config('${key.replace(/'/g, "''")}', '${restoreValue.replace(/'/g, "''")}', true)`,
-          );
-        }
-      }
-
-      const resetLocalsSql = getResetLocalsSql(this.locals, options);
-      if (resetLocalsSql) {
-        await this.sql.unsafe(resetLocalsSql);
-      }
-    }
-
-    return res;
-  }
-
-  close(): Promise<void> {
-    return this.sql.end();
-  }
-
-  assignError(to: QueryError, from: Error) {
-    return this.adapter.assignError(to, from);
-  }
-}

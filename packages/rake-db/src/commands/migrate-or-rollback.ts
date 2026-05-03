@@ -1,6 +1,6 @@
 import { createDbWithAdapter } from 'pqb';
 import {
-  AdapterBase,
+  Adapter,
   ColumnSchemaConfig,
   DbResult,
   emptyArray,
@@ -172,9 +172,9 @@ export const processMigrateConfig = (
 
 // for the 'single' mode, runs in transaction even if already in transaction to apply `search_path` and other possible locals
 const transactionIfSingle = (
-  adapter: AdapterBase,
+  adapter: Adapter,
   config: Pick<MigrateConfigInternal, 'transaction' | 'transactionSearchPath'>,
-  fn: (trx: AdapterBase) => Promise<void>,
+  fn: (trx: Adapter) => Promise<void>,
 ) => {
   return config.transaction === 'single'
     ? transaction(adapter, config, fn)
@@ -185,7 +185,7 @@ function makeMigrateFn(
   up: boolean,
   defaultCount: number,
   fn: (
-    trx: AdapterBase,
+    trx: Adapter,
     config: MigrateConfig,
     set: MigrationsSet,
     versions: RakeDbAppliedVersions,
@@ -388,11 +388,11 @@ export const redo: MigrateFn = makeMigrateFn(
   },
 );
 
-const getDb = (adapter: AdapterBase) =>
+const getDb = (adapter: Adapter) =>
   createDbWithAdapter<ColumnSchemaConfig>({ adapter });
 
 export const migrateOrRollback = async (
-  trx: AdapterBase,
+  trx: Adapter,
   config: MigrateConfigInternal,
   set: MigrationsSet,
   versions: RakeDbAppliedVersions,
@@ -469,7 +469,7 @@ export const migrateOrRollback = async (
       config.logger?.log(
         `${
           redo ? 'Reapplying migrations for' : up ? 'Migrating' : 'Rolling back'
-        } database ${trx.getDatabase()}\n`,
+        } database ${getAdapterDatabase(trx)}\n`,
       );
     }
 
@@ -605,7 +605,7 @@ export const runMigrationInOwnTransaction: typeof applyMigration = (
  * After calling `change` functions successfully, will save new entry or delete one in case of `up: false` from the migrations table.
  */
 export const applyMigration = async (
-  trx: AdapterBase,
+  trx: Adapter,
   up: boolean,
   changes: MigrationChange[],
   config: Pick<
@@ -643,4 +643,27 @@ const changeMigratedVersion = async (
     path.basename(file.path).slice(file.version.length + 1),
     config,
   );
+};
+
+const getAdapterDatabase = (adapter: Adapter): string => {
+  const getter = (adapter as { getDatabase?: () => string }).getDatabase;
+  if (getter) {
+    return getter.call(adapter);
+  }
+
+  let databaseURL = (adapter as { config?: { databaseURL?: string } }).config
+    ?.databaseURL;
+  if (!databaseURL) {
+    databaseURL = (
+      adapter as {
+        adapter?: { config?: { databaseURL?: string } };
+      }
+    ).adapter?.config?.databaseURL;
+  }
+
+  if (databaseURL) {
+    return new URL(databaseURL).pathname.slice(1);
+  }
+
+  return 'database';
 };

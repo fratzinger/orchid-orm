@@ -1,15 +1,21 @@
-import { AdapterBase } from 'pqb/internal';
+import { Adapter } from 'pqb/internal';
 import { makeFileVersion, writeMigrationFile } from '../commands/new-migration';
 import { saveMigratedVersion } from '../migration/manage-migrated-versions';
+import { SilentQueries } from '../migration/migration';
 import { astToMigration } from './ast-to-migration';
 import { structureToAst, makeStructureToAstCtx } from './structure-to-ast';
 import { RakeDbConfig } from '../config';
 
 export const pullDbStructure = async (
-  adapter: AdapterBase,
+  adapter: Adapter,
   config: RakeDbConfig,
 ): Promise<void> => {
-  const currentSchema = adapter.searchPath || 'public';
+  const currentSchema =
+    (
+      adapter as { getSearchPath?: () => string | undefined }
+    ).getSearchPath?.() ??
+    adapter.searchPath ??
+    'public';
 
   const ctx = makeStructureToAstCtx(config, currentSchema);
 
@@ -24,7 +30,7 @@ export const pullDbStructure = async (
   const silentQueries = Object.assign(adapter, {
     silentQuery: adapter.query,
     silentArrays: adapter.arrays,
-  });
+  }) as SilentQueries;
   await saveMigratedVersion(silentQueries, version, 'pull', config);
 
   const unsupportedEntries = Object.entries(ctx.unsupportedTypes);

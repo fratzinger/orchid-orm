@@ -8,7 +8,7 @@ import {
   RakeDbAppliedVersions,
 } from '../migration/manage-migrated-versions';
 import { getMigrationVersionOrThrow } from '../migration/migrations-set';
-import { AdapterBase, RecordString } from 'pqb/internal';
+import { Adapter, AdapterClass, RecordString } from 'pqb/internal';
 import { pushChange } from '../migration/change';
 import { promptSelect } from '../prompt';
 import { RakeDbConfig } from 'rake-db';
@@ -18,9 +18,9 @@ jest.mock('../migration/manage-migrated-versions');
 jest.mock('../prompt');
 jest.mock('../common', () => ({
   transaction(
-    adapter: AdapterBase,
+    adapter: Adapter,
     _config: RakeDbConfig,
-    fn: (adapter: AdapterBase) => unknown,
+    fn: (adapter: Adapter) => unknown,
   ) {
     return fn(adapter);
   },
@@ -32,7 +32,9 @@ const options = [
   { databaseURL: 'postgres://user@localhost/dbname-test' },
 ];
 
-const adapters = options.map((opts) => new TestAdapter(opts));
+const adapters = options.map(
+  (opts) => new AdapterClass({ driverAdapter: TestAdapter, config: opts }),
+);
 
 const dbChanges: { name: string; up: boolean; count: number }[] = [];
 

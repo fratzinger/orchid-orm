@@ -4,7 +4,7 @@ import fs from 'fs/promises';
 import { getMigrations, MigrationItem } from '../migration/migrations-set';
 import { getMigratedVersionsMap } from '../migration/manage-migrated-versions';
 import { RakeDbCtx } from '../common';
-import { AdapterBase, RecordOptionalString, colors } from 'pqb/internal';
+import { Adapter, RecordOptionalString, colors } from 'pqb/internal';
 import { redo } from './migrate-or-rollback';
 import { promptSelect } from '../prompt';
 
@@ -13,7 +13,7 @@ interface RebaseFile extends MigrationItem {
   serial: number;
 }
 
-export const rebase = async (adapters: AdapterBase[], config: RakeDbConfig) => {
+export const rebase = async (adapters: Adapter[], config: RakeDbConfig) => {
   if (config.migrations) {
     throw new Error('Cannot rebase migrations defined in the config');
   }

@@ -1,5 +1,5 @@
 import { RakeDbAst, promptSelect } from 'rake-db';
-import { RawSqlBase, QueryResult, AdapterBase, colors } from 'pqb/internal';
+import { RawSqlBase, QueryResult, Adapter, colors } from 'pqb/internal';
 import { AbortSignal } from '../generate';
 
 export interface CompareExpression {
@@ -17,7 +17,7 @@ export interface TableExpression extends CompareExpression {
 
 export const compareSqlExpressions = async (
   tableExpressions: TableExpression[],
-  adapter: AdapterBase,
+  adapter: Adapter,
 ) => {
   if (!tableExpressions.length) return;
 

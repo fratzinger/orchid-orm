@@ -1,10 +1,4 @@
-import {
-  assertType,
-  TestAdapter,
-  testDb,
-  TestTransactionAdapter,
-  useTestDatabase,
-} from 'test-utils';
+import { assertType, testDb, useTestDatabase } from 'test-utils';
 import {
   User,
   userColumnsSql,
@@ -12,6 +6,10 @@ import {
 } from '../../../test-utils/pqb.test-utils';
 import { AfterCommitError } from './transaction';
 import { noop } from '../../../utils';
+import {
+  AdapterClass,
+  TransactionAdapterClass,
+} from '../../../adapters/adapter';
 
 const afterCommitSampleError = {
   hookResults: [
@@ -32,11 +30,10 @@ const afterCommitSampleError = {
 
 describe('transaction', () => {
   beforeEach(() => jest.clearAllMocks());
-  afterAll(testDb.close);
 
   it('should start and commit transaction', async () => {
-    const transactionSpy = jest.spyOn(TestAdapter.prototype, 'transaction');
-    const querySpy = jest.spyOn(TestTransactionAdapter.prototype, 'query');
+    const transactionSpy = jest.spyOn(AdapterClass.prototype, 'transaction');
+    const querySpy = jest.spyOn(TransactionAdapterClass.prototype, 'query');
 
     const result = await testDb.transaction(async () => {
       const {
@@ -60,8 +57,8 @@ describe('transaction', () => {
   });
 
   it('should rollback if error happens', async () => {
-    const transactionSpy = jest.spyOn(TestAdapter.prototype, 'transaction');
-    const querySpy = jest.spyOn(TestTransactionAdapter.prototype, 'query');
+    const transactionSpy = jest.spyOn(AdapterClass.prototype, 'transaction');
+    const querySpy = jest.spyOn(TransactionAdapterClass.prototype, 'query');
 
     let error: Error | undefined;
 
@@ -78,7 +75,7 @@ describe('transaction', () => {
   });
 
   it('should accept isolation level and options', async () => {
-    const transactionSpy = jest.spyOn(TestAdapter.prototype, 'transaction');
+    const transactionSpy = jest.spyOn(AdapterClass.prototype, 'transaction');
 
     await testDb.transaction('REPEATABLE READ', async () => {});
     await testDb.transaction(
@@ -106,8 +103,8 @@ describe('transaction', () => {
   });
 
   it('should run a nested transaction with SAVEPOINT and RELEASE SAVEPOINT', async () => {
-    const transactionSpy = jest.spyOn(TestAdapter.prototype, 'transaction');
-    const arraysSpy = jest.spyOn(TestTransactionAdapter.prototype, 'arrays');
+    const transactionSpy = jest.spyOn(AdapterClass.prototype, 'transaction');
+    const arraysSpy = jest.spyOn(TransactionAdapterClass.prototype, 'arrays');
 
     const result = await testDb.transaction(
       async () =>
@@ -125,8 +122,8 @@ describe('transaction', () => {
   });
 
   it('should rollback a nested transaction with ROLLBACK TO SAVEPOINT', async () => {
-    const transactionSpy = jest.spyOn(TestAdapter.prototype, 'transaction');
-    const arraysSpy = jest.spyOn(TestTransactionAdapter.prototype, 'arrays');
+    const transactionSpy = jest.spyOn(AdapterClass.prototype, 'transaction');
+    const arraysSpy = jest.spyOn(TransactionAdapterClass.prototype, 'arrays');
 
     await expect(() =>
       testDb.transaction(
@@ -168,8 +165,8 @@ describe('transaction', () => {
 
   describe('ensureTransaction', () => {
     it('should not start another transaction when already inside a transaction', async () => {
-      const transactionSpy = jest.spyOn(TestAdapter.prototype, 'transaction');
-      const querySpy = jest.spyOn(TestTransactionAdapter.prototype, 'query');
+      const transactionSpy = jest.spyOn(AdapterClass.prototype, 'transaction');
+      const querySpy = jest.spyOn(TransactionAdapterClass.prototype, 'query');
 
       const result = await testDb.transaction(async () => {
         return testDb.ensureTransaction(async () => {
@@ -194,8 +191,8 @@ describe('transaction', () => {
     });
 
     it('should start a transaction if it was not started yet', async () => {
-      const transactionSpy = jest.spyOn(TestAdapter.prototype, 'transaction');
-      const querySpy = jest.spyOn(TestTransactionAdapter.prototype, 'query');
+      const transactionSpy = jest.spyOn(AdapterClass.prototype, 'transaction');
+      const querySpy = jest.spyOn(TransactionAdapterClass.prototype, 'query');
 
       const result = await testDb.ensureTransaction(async () => {
         const {

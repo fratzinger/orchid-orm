@@ -1,5 +1,5 @@
 import {
-  AdapterBase,
+  Adapter,
   ColumnSchemaConfig,
   DefaultColumnTypes,
   defaultSchemaConfig,
@@ -35,13 +35,10 @@ import { rebase } from './commands/rebase';
 import { changeIds } from './commands/change-ids';
 import { processMigrateConfig } from './commands/migrate-or-rollback';
 
-const close = (adapters: AdapterBase[]) =>
+const close = (adapters: Adapter[]) =>
   Promise.all(adapters.map((adapter) => adapter.close()));
 
-const maybeRunRecurrent = async (
-  adapters: AdapterBase[],
-  config: RakeDbConfig,
-) => {
+const maybeRunRecurrent = async (adapters: Adapter[], config: RakeDbConfig) => {
   config.recurrentPath &&
     (await runRecurrentMigrations(
       adapters,
@@ -103,15 +100,18 @@ const recurrent: RakeDbCommand = {
 
 export const rakeDbCommands: RakeDbCommands = {
   create: {
-    run: (adapters, config) => createDatabaseCommand(adapters, config),
+    run: (adapters, config) =>
+      createDatabaseCommand(adapters as Adapter[], config),
     help: 'create databases',
   },
   drop: {
-    run: dropDatabaseCommand,
+    run: (adapters, config) =>
+      dropDatabaseCommand(adapters as Adapter[], config),
     help: 'drop databases',
   },
   reset: {
-    run: (adapters, config) => resetDatabaseCommand(adapters, config),
+    run: (adapters, config) =>
+      resetDatabaseCommand(adapters as Adapter[], config),
     help: 'drop, create and migrate databases',
   },
   up: upCommand,

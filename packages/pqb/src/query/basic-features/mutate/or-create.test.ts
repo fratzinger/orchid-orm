@@ -9,10 +9,10 @@ import {
   db,
   sql,
   testDb,
-  TestTransactionAdapter,
   UserData,
   useTestDatabase,
 } from 'test-utils';
+import { TransactionAdapterClass } from '../../../adapters/adapter';
 
 const TableWithReadOnly = testDb(
   'user',
@@ -42,7 +42,7 @@ const TableWithSoftDelete = testDb(
   },
 );
 
-const arraysSpy = jest.spyOn(TestTransactionAdapter.prototype, 'arrays');
+const arraysSpy = jest.spyOn(TransactionAdapterClass.prototype, 'arrays');
 
 describe('orCreate', () => {
   useTestDatabase();

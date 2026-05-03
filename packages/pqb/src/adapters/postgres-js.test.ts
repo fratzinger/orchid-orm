@@ -1,640 +1,246 @@
+import postgres from 'postgres';
 import { PostgresJsAdapter } from './postgres-js';
-import { asMock, testDb, testDbOptions } from 'test-utils';
-import { setTimeout } from 'timers/promises';
-import { QueryError } from '../query/errors';
-import { AdapterBase } from './adapter';
-import { noop } from 'pqb/internal';
+import { testDbOptions } from 'test-utils';
 
-const testAdapter = new PostgresJsAdapter({
-  databaseURL: process.env.PG_URL,
-});
+class MockRawResult extends Array<unknown> {
+  count: number;
+  statement: {
+    columns: Array<{ name: string }>;
+  };
 
-testDb.adapter = testAdapter;
+  constructor(rows: unknown[], columns: Array<{ name: string }>) {
+    super(...rows);
+    this.count = rows.length;
+    this.statement = { columns };
+  }
+}
+
+const makeRawResult = (
+  rows: unknown[],
+  columns: Array<{ name: string }>,
+): MockRawResult => new MockRawResult(rows, columns);
+
+type UnsafeSpy = jest.SpyInstance<unknown, [string, ...unknown[]]>;
+
+const spyOnUnsafe = (client: postgres.TransactionSql): UnsafeSpy => {
+  return jest.spyOn(
+    client as unknown as {
+      unsafe: (text: string, ...args: unknown[]) => unknown;
+    },
+    'unsafe',
+  ) as UnsafeSpy;
+};
+
+const issuedSql = (unsafeSpy: UnsafeSpy): string[] =>
+  unsafeSpy.mock.calls.map((call) => call[0]);
 
 describe('postgres-js', () => {
   afterEach(() => jest.clearAllMocks());
-  afterAll(() => testAdapter.close());
 
-  describe('queries', () => {
-    it('should run query and close connection by calling .close()', async () => {
-      const res = await testAdapter.query('SELECT 1 as num');
+  describe('queryClient unit', () => {
+    it('wraps non-arrays query result', async () => {
+      const rawResult = makeRawResult([{ one: 1 }], [{ name: 'one' }]);
+      const client = {
+        unsafe: jest.fn(() => Promise.resolve(rawResult)),
+      };
 
-      expect(res).toMatchObject({
-        rowCount: 1,
-        rows: [{ num: 1 }],
-        fields: [
-          {
-            name: 'num',
-          },
-        ],
-      });
+      const result = await PostgresJsAdapter.queryClient(
+        client as unknown as postgres.TransactionSql,
+        'SELECT 1 AS one',
+      );
+
+      expect(client.unsafe).toHaveBeenCalledWith('SELECT 1 AS one', undefined);
+      expect(result.rowCount).toBe(1);
+      expect(result.rows[0]).toEqual({ one: 1 });
+      expect(result.fields).toEqual([{ name: 'one' }]);
     });
 
-    it('should not parse certain types', async () => {
-      const res = await testAdapter.query(`
-        SELECT
-          now()::date as date,
-          now()::timestamp as timestamp,
-          now()::timestamptz as timestamptz,
-          '((3,4),5)'::circle as circle
-      `);
+    it('uses values() in arrays mode', async () => {
+      const objectResult = makeRawResult([{ one: 1 }], [{ name: 'one' }]);
+      const arraysResult = makeRawResult([[1]], [{ name: 'one' }]);
 
-      expect(res.rows[0]).toEqual({
-        date: expect.any(String),
-        timestamp: expect.any(String),
-        timestamptz: expect.any(String),
-        circle: expect.any(String),
-      });
+      const query = Promise.resolve(objectResult) as Promise<MockRawResult> & {
+        values: jest.Mock;
+      };
+      query.values = jest.fn(() => Promise.resolve(arraysResult));
+
+      const client = {
+        unsafe: jest.fn(() => query),
+      };
+
+      const result = await PostgresJsAdapter.queryClient(
+        client as unknown as postgres.TransactionSql,
+        'SELECT 1 AS one',
+        undefined,
+        undefined,
+        undefined,
+        true,
+      );
+
+      expect(query.values).toHaveBeenCalledTimes(1);
+      expect(result.rowCount).toBe(1);
+      expect(result.rows[0]).toEqual([1]);
+      expect(result.fields).toEqual([{ name: 'one' }]);
     });
 
-    it('should can query arrays', async () => {
-      const res = await testAdapter.arrays('SELECT 1 as num');
+    it('rolls back to releasingSavepoint on failure', async () => {
+      const error = new Error('query failed');
+      const rollbackResult = makeRawResult([], []);
 
-      expect(res).toMatchObject({
-        rowCount: 1,
-        rows: [[1]],
-        fields: [
-          {
-            name: 'num',
-          },
-        ],
-      });
+      const client = {
+        unsafe: jest.fn((text: string) => {
+          if (text === 'SELECT * FROM non_existing_table') {
+            return Promise.reject(error);
+          }
+
+          if (text === 'ROLLBACK TO SAVEPOINT "sp"') {
+            return Promise.resolve(rollbackResult);
+          }
+
+          return Promise.resolve(makeRawResult([], []));
+        }),
+      };
+
+      await expect(
+        PostgresJsAdapter.queryClient(
+          client as unknown as postgres.TransactionSql,
+          'SELECT * FROM non_existing_table',
+          undefined,
+          undefined,
+          'sp',
+        ),
+      ).rejects.toBe(error);
+
+      expect(client.unsafe).toHaveBeenCalledWith('ROLLBACK TO SAVEPOINT "sp"');
+    });
+  });
+
+  describe('queryClient integration', () => {
+    let sql: postgres.Sql;
+
+    beforeAll(() => {
+      sql = PostgresJsAdapter.configure(testDbOptions);
     });
 
-    describe('transaction', () => {
-      it('executes a transaction', async () => {
-        const sqlSpy = jest.spyOn(testAdapter.sql, 'begin');
-
-        const res = await testAdapter.transaction(async (trx) => {
-          return trx.query('SELECT 1 as one');
-        });
-
-        expect(res.rows[0]).toEqual({ one: 1 });
-
-        expect(sqlSpy.mock.calls.map((arr) => arr[0])).toEqual([
-          expect.any(Function),
-        ]);
-      });
-
-      it('executes a transaction with custom options', async () => {
-        const sqlSpy = jest.spyOn(testAdapter.sql, 'begin');
-
-        const res = await testAdapter.transaction(
-          {
-            options: 'read write',
-          },
-          async (trx) => {
-            return trx.query('SELECT 1 as one');
-          },
-        );
-
-        expect(res.rows[0]).toEqual({ one: 1 });
-
-        expect(sqlSpy.mock.calls.map((arr) => arr[0])).toEqual(['read write']);
-      });
-
-      it('sets a searchPath', async () => {
-        const res = await testAdapter.transaction(
-          {
-            locals: {
-              search_path: 'schema',
-            },
-          },
-          async (trx) => {
-            return trx.query('SHOW search_path');
-          },
-        );
-
-        expect(res.rows[0].search_path).toBe('schema');
-      });
-
-      it('sets temporary in a nested transaction call', async () => {
-        const getSearchPath = (adapter: AdapterBase) =>
-          adapter
-            .query('SHOW search_path')
-            .then((result) => result.rows[0].search_path);
-
-        const res = await testAdapter.transaction(
-          { locals: { search_path: 'public' } },
-          async (trx) => {
-            const before = await getSearchPath(trx);
-            const nested = await trx.transaction(
-              {
-                locals: {
-                  search_path: 'schema',
-                },
-              },
-              async (trx) => {
-                return getSearchPath(trx);
-              },
-            );
-            const after = await getSearchPath(trx);
-            return { before, nested, after };
-          },
-        );
-
-        expect(res).toEqual({
-          before: 'public',
-          nested: 'schema',
-          after: 'public',
-        });
-      });
-
-      it('sets arbitrary locals', async () => {
-        const getLocal = (adapter: AdapterBase) =>
-          adapter
-            .query('SHOW app.user_id')
-            .then((result) => result.rows[0]['app.user_id']);
-
-        const res = await testAdapter.transaction(
-          { locals: { 'app.user_id': 1 } },
-          async (trx) => {
-            const before = await getLocal(trx);
-            const nested = await trx.transaction(
-              {
-                locals: {
-                  'app.user_id': 2,
-                },
-              },
-              async (trx) => {
-                return getLocal(trx);
-              },
-            );
-            const after = await getLocal(trx);
-            return { before, nested, after };
-          },
-        );
-
-        expect(res).toEqual({
-          before: '1',
-          nested: '2',
-          after: '1',
-        });
-      });
+    afterAll(async () => {
+      await PostgresJsAdapter.close(sql);
     });
 
-    describe('savepoint', () => {
-      it('should support `startingSavepoint`', async () => {
-        await testAdapter.transaction(async (trx) => {
-          await trx.query(
-            `INSERT INTO "schema"."user"("name", "password") VALUES ('name', 'password')`,
+    it('supports only startingSavepoint', async () => {
+      await PostgresJsAdapter.begin<postgres.TransactionSql, void>(
+        sql,
+        async (client) => {
+          const unsafeSpy = spyOnUnsafe(client);
+
+          const result = await PostgresJsAdapter.queryClient(
+            client,
+            'SELECT 1',
             undefined,
-            'savepoint',
+            'start_sp',
           );
 
-          const { rows } = await trx.query(`SELECT * FROM "schema"."user"`);
-          expect(rows.length).toEqual(1);
-
-          await trx.query(`ROLLBACK TO SAVEPOINT "savepoint"`);
-
-          const { rows: rows2 } = await trx.query(
-            `SELECT * FROM "schema"."user"`,
+          expect(result.rowCount).toBe(1);
+          expect(issuedSql(unsafeSpy)).toEqual(
+            expect.arrayContaining(['SAVEPOINT "start_sp"']),
           );
-          expect(rows2.length).toEqual(0);
-        });
-      });
-
-      it('should rollback to `releasingSavepoint` if query fails', async () => {
-        await testAdapter.transaction(async (trx) => {
-          await trx.query(
-            `INSERT INTO "schema"."user"("name", "password") VALUES ('name', 'password')`,
-            undefined,
-            'savepoint',
-          );
-
-          const { rows } = await trx.query(`SELECT * FROM "schema"."user"`);
-          expect(rows.length).toEqual(1);
-
-          await trx
-            .query(
-              `SELECT * FROM "non-existing"`,
-              undefined,
-              undefined,
-              'savepoint',
-            )
-            .catch(noop);
-
-          const { rows: rows2 } = await trx.query(
-            `SELECT * FROM "schema"."user"`,
-          );
-          expect(rows2.length).toEqual(0);
-        });
-      });
-
-      it('should set and release a savepoint when both `startingSavepoint` and `releasingSavepoint` are provided', async () => {
-        await testAdapter.transaction(async (trx) => {
-          await trx.query(
-            `INSERT INTO "schema"."user"("name", "password") VALUES ('name', 'password')`,
-            undefined,
-            'savepoint',
-            'savepoint',
-          );
-
-          const { rows } = await trx.query(`SELECT * FROM "schema"."user"`);
-          expect(rows.length).toEqual(1);
-
-          await expect(
-            trx.query(`ROLLBACK TO SAVEPOINT "savepoint"`),
-          ).rejects.toThrow('savepoint "savepoint" does not exist');
-        });
-      });
-    });
-
-    it('should assign error properties', async () => {
-      let Id;
-      const dbErr = await testAdapter
-        .transaction(async (trx) => {
-          const res = await trx.query(
-            `INSERT INTO "schema"."user"("name", "password") VALUES ('name', 'password') RETURNING "id"`,
-          );
-          Id = res.rows[0].id;
-
-          await trx.query(
-            `INSERT INTO "schema"."user"("id", "name", "password") VALUES (${Id}, 'name', 'password') RETURNING "id"`,
-          );
-        })
-        .catch((err) => err);
-
-      class Err extends QueryError {}
-
-      const err = new Err({} as never);
-
-      testAdapter.assignError(err, dbErr);
-
-      expect(err).toMatchObject({
-        message: 'duplicate key value violates unique constraint "user_pkey"',
-        code: '23505',
-        detail: `Key (id)=(${Id}) already exists.`,
-        severity: 'ERROR',
-        schema: 'schema',
-        table: 'user',
-        constraint: 'user_pkey',
-      });
-    });
-  });
-
-  it('should use ssl from connection string', () => {
-    const noSSL = new PostgresJsAdapter({
-      databaseURL: 'postgres://user:@host:123/db?ssl=false',
-    });
-
-    expect(noSSL.sql.options.ssl).toBe(false);
-
-    const ssl = new PostgresJsAdapter({
-      databaseURL: 'postgres://user:@host:123/db?ssl=true',
-    });
-
-    expect(ssl.sql.options.ssl).toBe(true);
-  });
-
-  it('should recreate client on close so it can be reused', async () => {
-    const adapter = new PostgresJsAdapter({
-      databaseURL: 'postgres://user:@host:123/db',
-    });
-    const { sql } = adapter;
-    const endSpy = jest.spyOn(sql, 'end').mockResolvedValue();
-
-    await adapter.close();
-
-    expect(endSpy).toHaveBeenCalled();
-    expect(adapter.sql).not.toBe(sql);
-
-    await adapter.sql.end();
-  });
-
-  describe('search path', () => {
-    it('should support setting a default schema via url parameters', async () => {
-      const url = new URL(testDbOptions.databaseURL as string);
-      url.searchParams.set('searchPath', 'custom');
-      const testAdapter = new PostgresJsAdapter({
-        ...testDbOptions,
-        databaseURL: url.toString(),
-      });
-
-      const res = await testAdapter.query('SHOW search_path');
-
-      expect(res.rows[0]).toEqual({ search_path: 'custom' });
-
-      await testAdapter.close();
-    });
-
-    it('should support setting a default schema via config', async () => {
-      const testAdapter = new PostgresJsAdapter({
-        ...testDbOptions,
-        databaseURL: testDbOptions.databaseURL,
-        searchPath: 'custom',
-      });
-
-      const res = await testAdapter.query('SHOW search_path');
-
-      expect(res.rows[0]).toEqual({ search_path: 'custom' });
-
-      await testAdapter.close();
-    });
-  });
-
-  describe('connectRetry', () => {
-    const err = Object.assign(new Error(), { code: 'ECONNREFUSED' });
-
-    it('should handle default connect retry strategy', async () => {
-      const testAdapter = new PostgresJsAdapter({
-        databaseURL: testDbOptions.databaseURL,
-        connectRetry: true,
-      });
-
-      jest.spyOn(testAdapter.sql, 'unsafe').mockImplementation(() => {
-        throw err;
-      });
-
-      await expect(() => testAdapter.query('SELECT 1')).rejects.toThrow(err);
-
-      const attempts = 10;
-      const delay = 50;
-      const factor = 1.5;
-      expect(asMock(setTimeout).mock.calls).toEqual(
-        Array.from({ length: attempts - 1 }).map((_, i) => [
-          factor ** i * delay,
-        ]),
+        },
       );
     });
 
-    it('should use custom strategy', async () => {
-      const strategy = jest.fn();
+    it('supports only releasingSavepoint after it was started earlier', async () => {
+      await PostgresJsAdapter.begin<postgres.TransactionSql, void>(
+        sql,
+        async (client) => {
+          const unsafeSpy = spyOnUnsafe(client);
 
-      const testAdapter = new PostgresJsAdapter({
-        connectRetry: {
-          attempts: 3,
-          strategy,
+          await PostgresJsAdapter.queryClient(
+            client,
+            'SELECT 1',
+            undefined,
+            'release_sp',
+          );
+          const result = await PostgresJsAdapter.queryClient(
+            client,
+            'SELECT 1',
+            undefined,
+            undefined,
+            'release_sp',
+          );
+
+          expect(result.rowCount).toBe(1);
+          expect(issuedSql(unsafeSpy)).toEqual(
+            expect.arrayContaining([
+              'SAVEPOINT "release_sp"',
+              'RELEASE SAVEPOINT "release_sp"',
+            ]),
+          );
         },
-      });
-
-      jest.spyOn(testAdapter.sql, 'unsafe').mockImplementation(() => {
-        throw err;
-      });
-
-      await expect(() => testAdapter.query('SELECT 1')).rejects.toThrow(err);
-
-      expect(strategy.mock.calls).toEqual([
-        [1, 3],
-        [2, 3],
-      ]);
-    });
-  });
-
-  describe('getters', () => {
-    it('should have getDatabase', () => {
-      const adapter = new PostgresJsAdapter({
-        databaseURL: 'postgres://user:@host:123/db',
-      });
-      expect(adapter.getDatabase()).toBe('db');
-
-      const adapter2 = new PostgresJsAdapter({
-        database: 'db',
-      });
-      expect(adapter2.getDatabase()).toBe('db');
+      );
     });
 
-    it('should have getUser', () => {
-      const adapter = new PostgresJsAdapter({
-        databaseURL: 'postgres://user:@host:123/db',
-      });
-      expect(adapter.getUser()).toBe('user');
+    it('supports both startingSavepoint and releasingSavepoint', async () => {
+      await PostgresJsAdapter.begin<postgres.TransactionSql, void>(
+        sql,
+        async (client) => {
+          const unsafeSpy = spyOnUnsafe(client);
 
-      const adapter2 = new PostgresJsAdapter({
-        user: 'user',
-      });
-      expect(adapter2.getUser()).toBe('user');
-    });
-
-    it('should have getSearchPath', () => {
-      const adapter = new PostgresJsAdapter({
-        databaseURL: 'postgres://user:@host:123/db?searchPath=path',
-      });
-      expect(adapter.getSearchPath()).toBe('path');
-
-      const adapter2 = new PostgresJsAdapter({
-        searchPath: 'path',
-      });
-      expect(adapter2.getSearchPath()).toBe('path');
-    });
-
-    it('should have getHost', () => {
-      const adapter = new PostgresJsAdapter({
-        databaseURL: 'postgres://user:@host:123/db',
-      });
-      expect(adapter.getHost()).toBe('host');
-
-      const adapter2 = new PostgresJsAdapter({
-        host: 'host',
-      });
-      expect(adapter2.getHost()).toBe('host');
-    });
-
-    it('should have getSchema', () => {
-      const adapter = new PostgresJsAdapter({
-        schema: 'schema',
-      });
-      expect(adapter.getSchema()).toBe('schema');
-    });
-  });
-
-  describe('sql session state', () => {
-    describe('query with sqlSessionState', () => {
-      it('should set role via sqlSessionState and restore after query', async () => {
-        // Get the default role to verify restoration
-        const beforeRes = await testAdapter.query('SELECT current_user');
-        const defaultRole = beforeRes.rows[0].current_user;
-
-        // Query with the 'app-user' role - should capture, set, query, restore
-        const res = await testAdapter.query(
-          'SELECT current_user',
-          undefined,
-          undefined,
-          undefined,
-          { role: 'app-user' },
-        );
-
-        expect(res.rows[0].current_user).toBe('app-user');
-
-        // Verify role was restored to the default role
-        const afterRes = await testAdapter.query('SELECT current_user');
-        expect(afterRes.rows[0].current_user).toBe(defaultRole);
-      });
-
-      it('should set config via sqlSessionState and restore after query', async () => {
-        // Pre-set one config to test proper recovery
-        await testAdapter.query(
-          `SELECT set_config('app.preset_key', 'preset_value', false)`,
-        );
-
-        // Query with 2 config values - one pre-set, one new
-        const res = await testAdapter.query(
-          `SELECT
-            current_setting('app.preset_key', true) as preset,
-            current_setting('app.new_key', true) as new`,
-          undefined,
-          undefined,
-          undefined,
-          {
-            setConfig: {
-              'app.preset_key': 'new_preset_value',
-              'app.new_key': 'new_value',
-            },
-          },
-        );
-
-        expect(res.rows[0]).toEqual({
-          preset: 'new_preset_value',
-          new: 'new_value',
-        });
-
-        // Configs are restored after query - preset_key restored to original, new_key reset
-        const afterRes = await testAdapter.query(
-          `SELECT
-            current_setting('app.preset_key', true) as preset,
-            current_setting('app.new_key', true) as new`,
-        );
-
-        // Preset key should be restored to original value
-        expect(afterRes.rows[0].preset).toBe('preset_value');
-        // New key should be empty (reset) since it wasn't set before
-        expect(afterRes.rows[0].new).toBe('');
-      });
-
-      it('should handle multiple config keys in sqlSessionState', async () => {
-        // Pre-set one config to test proper recovery
-        await testAdapter.query(
-          `SELECT set_config('app.key1', 'original1', false)`,
-        );
-
-        const res = await testAdapter.query(
-          `SELECT
-            current_setting('app.key1', true) as k1,
-            current_setting('app.key2', true) as k2`,
-          undefined,
-          undefined,
-          undefined,
-          {
-            setConfig: {
-              'app.key1': 'value1',
-              'app.key2': 'value2',
-            },
-          },
-        );
-
-        expect(res.rows[0]).toEqual({
-          k1: 'value1',
-          k2: 'value2',
-        });
-
-        // Verify key1 is restored to original, key2 is reset
-        const afterRes = await testAdapter.query(
-          `SELECT
-            current_setting('app.key1', true) as k1,
-            current_setting('app.key2', true) as k2`,
-        );
-
-        expect(afterRes.rows[0].k1).toBe('original1');
-        expect(afterRes.rows[0].k2).toBe('');
-      });
-    });
-
-    describe('arrays with sqlSessionState', () => {
-      it('should execute arrays query with sqlSessionState', async () => {
-        // Pre-set one config to test proper recovery
-        await testAdapter.query(
-          `SELECT set_config('app.arr_preset', 'preset_val', false)`,
-        );
-
-        const res = await testAdapter.arrays(
-          `SELECT
-            current_setting('app.arr_preset', true),
-            current_setting('app.arr_new', true)`,
-          undefined,
-          undefined,
-          undefined,
-          {
-            setConfig: {
-              'app.arr_preset': 'new_preset',
-              'app.arr_new': 'new_val',
-            },
-          },
-        );
-
-        expect(res.rows[0][0]).toBe('new_preset');
-        expect(res.rows[0][1]).toBe('new_val');
-
-        // Verify preset is restored, new is reset
-        const afterRes = await testAdapter.arrays(
-          `SELECT
-            current_setting('app.arr_preset', true),
-            current_setting('app.arr_new', true)`,
-        );
-
-        expect(afterRes.rows[0][0]).toBe('preset_val');
-        expect(afterRes.rows[0][1]).toBe('');
-      });
-    });
-
-    describe('transaction with sqlSessionState', () => {
-      it('should handle sqlSessionState in transaction queries', async () => {
-        // Pre-set one config outside transaction
-        await testAdapter.query(
-          `SELECT set_config('app.trx_preset', 'original', false)`,
-        );
-
-        await testAdapter.transaction(async (trx) => {
-          // Query with sqlSessionState inside transaction
-          const res = await trx.query(
-            `SELECT
-              current_setting('app.trx_preset', true) as preset,
-              current_setting('app.trx_new', true) as new`,
+          const result = await PostgresJsAdapter.queryClient(
+            client,
+            'SELECT 1',
             undefined,
-            undefined,
-            undefined,
-            {
-              setConfig: {
-                'app.trx_preset': 'trx_preset_val',
-                'app.trx_new': 'trx_new_val',
-              },
-            },
+            'both_sp',
+            'both_sp',
           );
 
-          expect(res.rows[0]).toEqual({
-            preset: 'trx_preset_val',
-            new: 'trx_new_val',
-          });
-        });
+          expect(result.rowCount).toBe(1);
+          expect(issuedSql(unsafeSpy)).toEqual(
+            expect.arrayContaining([
+              'SAVEPOINT "both_sp"',
+              'RELEASE SAVEPOINT "both_sp"',
+            ]),
+          );
+        },
+      );
+    });
 
-        // Verify preset is restored after transaction, new is reset
-        const afterRes = await testAdapter.query(
-          `SELECT
-            current_setting('app.trx_preset', true) as preset,
-            current_setting('app.trx_new', true) as new`,
-        );
+    it('rolls back to releasingSavepoint on failure and transaction remains queryable', async () => {
+      await PostgresJsAdapter.begin<postgres.TransactionSql, void>(
+        sql,
+        async (client) => {
+          const unsafeSpy = spyOnUnsafe(client);
 
-        expect(afterRes.rows[0].preset).toBe('original');
-        expect(afterRes.rows[0].new).toBe('');
-      });
-
-      it('should set role in transaction and restore after', async () => {
-        await testAdapter.transaction(async (trx) => {
-          // Set role to 'app-user' and verify
-          const res = await trx.query(
-            'SELECT current_user',
+          await PostgresJsAdapter.queryClient(
+            client,
+            'SELECT 1',
             undefined,
-            undefined,
-            undefined,
-            { role: 'app-user' },
+            'failing_sp',
           );
 
-          expect(res.rows[0].current_user).toBe('app-user');
-        });
+          let error: unknown;
+          try {
+            await PostgresJsAdapter.queryClient(
+              client,
+              'SELECT * FROM non_existing_table',
+              undefined,
+              undefined,
+              'failing_sp',
+            );
+          } catch (err) {
+            error = err;
+          }
 
-        // After transaction, role should be restored
-        const afterRes = await testAdapter.query('SELECT current_user');
-        expect(afterRes.rows[0].current_user).not.toBe('app-user');
-      });
+          expect(error).toBeInstanceOf(Error);
+          expect(issuedSql(unsafeSpy)).toEqual(
+            expect.arrayContaining(['ROLLBACK TO SAVEPOINT "failing_sp"']),
+          );
+
+          const result = await PostgresJsAdapter.queryClient(
+            client,
+            'SELECT 1',
+          );
+          expect(result.rowCount).toBe(1);
+        },
+      );
     });
   });
 });

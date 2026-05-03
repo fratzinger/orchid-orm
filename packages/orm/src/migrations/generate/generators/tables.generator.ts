@@ -3,7 +3,7 @@ import {
   ArrayColumn,
   ColumnsShape,
   DbStructureDomainsMap,
-  AdapterBase,
+  Adapter,
   EnumColumn,
   GeneratorIgnore,
   VirtualColumn,
@@ -73,7 +73,7 @@ export interface TableShapes {
 export const processTables = async (
   ast: RakeDbAst[],
   domainsMap: DbStructureDomainsMap,
-  adapter: AdapterBase,
+  adapter: Adapter,
   dbStructure: IntrospectedStructure,
   config: RakeDbConfig,
   {
@@ -163,7 +163,7 @@ const collectCreateTables = (
 };
 
 const collectChangeAndDropTables = (
-  adapter: AdapterBase,
+  adapter: Adapter,
   config: RakeDbConfig,
   tables: CodeTable[],
   dbStructure: IntrospectedStructure,
@@ -254,7 +254,7 @@ const applyChangeTableSchemas = (
 };
 
 const applyChangeTables = async (
-  adapter: AdapterBase,
+  adapter: Adapter,
   changeTables: ChangeTableData[],
   structureToAstCtx: StructureToAstCtx,
   dbStructure: IntrospectedStructure,
@@ -358,10 +358,7 @@ const getColumnDbTypeForComparison = (
 const freezeSqlClock = (sql: string) =>
   sql.replaceAll('clock_timestamp()', `'0.1ms'::interval + now()`);
 
-const applyCompareSql = async (
-  compareSql: CompareSql,
-  adapter: AdapterBase,
-) => {
+const applyCompareSql = async (compareSql: CompareSql, adapter: Adapter) => {
   if (compareSql.expressions.length) {
     const {
       rows: [results],
@@ -511,7 +508,7 @@ const makeTableShape = (table: CodeTable): ColumnsShape => {
 };
 
 const processTableChange = async (
-  adapter: AdapterBase,
+  adapter: Adapter,
   structureToAstCtx: StructureToAstCtx,
   dbStructure: IntrospectedStructure,
   domainsMap: DbStructureDomainsMap,

@@ -1,4 +1,4 @@
-import { DbExtension, AdapterBase, pathToLog } from 'pqb/internal';
+import { DbExtension, Adapter, pathToLog } from 'pqb/internal';
 import {
   makeFileVersion,
   makeStructureToAstCtx,
@@ -19,7 +19,7 @@ import {
 import { appCodeGenUpdateDbFile } from './appCodeGenerators/dbFile.appCodeGenerator';
 import { generate } from '../generate/generate';
 
-export const pull = async (adapters: AdapterBase[], config: RakeDbConfig) => {
+export const pull = async (adapters: Adapter[], config: RakeDbConfig) => {
   if (!config.dbPath || !config.baseTable) {
     throw new Error(
       `\`${

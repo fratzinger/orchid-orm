@@ -1,4 +1,4 @@
-import { AdapterBase } from 'pqb/internal';
+import { Adapter } from 'pqb/internal';
 import {
   createMigrationInterface,
   ChangeCallback,
@@ -11,7 +11,7 @@ import { AbortSignal } from './generate';
 const rollbackErr = new Error('Rollback');
 
 export const verifyMigration = async (
-  adapter: AdapterBase,
+  adapter: Adapter,
   config: RakeDbConfig,
   migrationCode: string,
   generateMigrationParams: ComposeMigrationParams,

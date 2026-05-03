@@ -7,7 +7,7 @@ import {
 } from './expressions/raw-sql';
 import { Sql } from './sql/sql';
 import { TemplateLiteralArgs } from './expressions/expression';
-import { AdapterBase, QueryResult, QueryResultRow } from '../adapters/adapter';
+import { Adapter, QueryResult, QueryResultRow } from '../adapters/adapter';
 import { sqlSessionContextGetStateFromAsyncState } from '../adapters/features/sql-session-context';
 import { RecordUnknown } from '../utils';
 import { TopToSqlCtx, ToSQLCtx } from './sql/to-sql';
@@ -98,7 +98,7 @@ export const performQuery = async <Result = QueryResult>(
   q: {
     qb: QueryBuilder;
     internal: QueryInternal;
-    adapterNotInTransaction: AdapterBase;
+    adapterNotInTransaction: Adapter;
     q: QueryData;
   },
   args: SQLQueryArgs,

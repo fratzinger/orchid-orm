@@ -1,5 +1,5 @@
 import {
-  AdapterBase,
+  Adapter,
   EmptyObject,
   RecordUnknown,
   DefaultPrivileges,
@@ -748,7 +748,7 @@ interface IntrospectDbStructureParams {
   loadDefaultPrivileges?: boolean;
 }
 
-export async function getDbVersion(db: AdapterBase): Promise<number> {
+export async function getDbVersion(db: Adapter): Promise<number> {
   const {
     rows: [{ version: versionString }],
   } = await db.query<{ version: string }>('SELECT version()');
@@ -757,7 +757,7 @@ export async function getDbVersion(db: AdapterBase): Promise<number> {
 }
 
 export async function introspectDbSchema(
-  db: AdapterBase,
+  db: Adapter,
   params?: IntrospectDbStructureParams,
 ): Promise<IntrospectedStructure> {
   const version = await getDbVersion(db);

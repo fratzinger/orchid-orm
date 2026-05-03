@@ -2,7 +2,7 @@ import { runRecurrentMigrations } from './recurrent';
 import { readdir, readFile, stat } from 'fs/promises';
 import { asMock, TestAdapter } from 'test-utils';
 import { join } from 'path';
-import { noop } from 'pqb/internal';
+import { AdapterClass, noop } from 'pqb/internal';
 
 jest.mock('fs/promises', () => ({
   readdir: jest.fn(),
@@ -25,7 +25,9 @@ const options = [
   { databaseURL: 'postgres://user@localhost/one' },
   { databaseURL: 'postgres://user@localhost/two' },
 ];
-const adapters = options.map((opts) => new TestAdapter(opts));
+const adapters = options.map(
+  (opts) => new AdapterClass({ driverAdapter: TestAdapter, config: opts }),
+);
 
 describe('recurrent', () => {
   beforeEach(() => {
@@ -54,11 +56,11 @@ describe('recurrent', () => {
   });
 
   it('should apply sql file', async () => {
-    TestAdapter.prototype.arrays = jest.fn();
-    TestAdapter.prototype.close = jest.fn();
+    AdapterClass.prototype.arrays = jest.fn();
+    AdapterClass.prototype.close = jest.fn();
 
     const db = {
-      adapter: { arrays: TestAdapter.prototype.arrays },
+      adapter: { arrays: AdapterClass.prototype.arrays },
     };
 
     asMock(readdir).mockResolvedValueOnce(['one.sql']);
@@ -94,7 +96,7 @@ describe('recurrent', () => {
   it('should read dir recursively, query each sql file', async () => {
     const query = jest.fn();
 
-    TestAdapter.prototype.arrays = query;
+    AdapterClass.prototype.arrays = query;
 
     asMock(readdir).mockResolvedValueOnce([
       'dir',

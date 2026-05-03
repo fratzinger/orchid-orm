@@ -1,5 +1,5 @@
 import {
-  AdapterBase,
+  Adapter,
   ColumnSchemaConfig,
   DbResult,
   DefaultColumnTypes,
@@ -181,7 +181,7 @@ export const rakeDbConfigDefaults = {
 
 export interface RakeDbCommandFn {
   (
-    adapters: AdapterBase[],
+    adapters: Adapter[],
     config: RakeDbConfig,
     args: string[],
   ): MaybePromise<unknown>;
@@ -209,7 +209,7 @@ export interface ChangeCallback {
 
 export interface ChangeCommitCallback {
   (arg: {
-    adapter: AdapterBase;
+    adapter: Adapter;
     up: boolean;
     migrations: MigrationItem[];
   }): void | Promise<void>;

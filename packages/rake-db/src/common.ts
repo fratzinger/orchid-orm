@@ -1,5 +1,5 @@
 import {
-  AdapterBase,
+  Adapter,
   ColumnSchemaConfig,
   EnumColumn,
   singleQuote,
@@ -142,9 +142,9 @@ export const makePopulateEnumQuery = (
 };
 
 export const transaction = <T>(
-  adapter: AdapterBase,
+  adapter: Adapter,
   config: Pick<RakeDbConfig, 'transactionSearchPath'>,
-  fn: (trx: AdapterBase) => Promise<T>,
+  fn: (trx: Adapter) => Promise<T>,
 ): Promise<T> => {
   const searchPath = config.transactionSearchPath;
   return adapter.transaction<T>(
@@ -160,7 +160,7 @@ export const transaction = <T>(
   );
 };
 
-export const queryLock = (trx: AdapterBase) =>
+export const queryLock = (trx: Adapter) =>
   trx.query(`SELECT pg_advisory_xact_lock('${RAKE_DB_LOCK_KEY}')`);
 
 export const getCliParam = (

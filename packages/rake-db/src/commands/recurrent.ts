@@ -1,10 +1,10 @@
 import { createDbWithAdapter } from 'pqb';
-import { AdapterBase, DbResult, QueryLogger } from 'pqb/internal';
+import { Adapter, DbResult, QueryLogger } from 'pqb/internal';
 import { join } from 'path';
 import { readdir, stat, readFile } from 'fs/promises';
 
 export const runRecurrentMigrations = async (
-  adapters: AdapterBase[],
+  adapters: Adapter[],
   config: {
     recurrentPath: string;
     logger?: QueryLogger;

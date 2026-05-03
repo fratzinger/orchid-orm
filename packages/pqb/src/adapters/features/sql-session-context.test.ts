@@ -219,16 +219,14 @@ describe('adapter.utils', () => {
       const mockQuery = jest
         .fn()
         .mockResolvedValue({ rows: [['old_role']], rowCount: 1, fields: [] });
-      const releaseFn = jest.fn().mockResolvedValue(undefined);
 
       const setup = {
         roleSetupSql: 'SET ROLE "test_role"',
         captureRoleSql: 'SELECT current_user',
       };
 
-      await sqlSessionContextExecute(mockQuery, setup, mainQuery, releaseFn);
+      await sqlSessionContextExecute(mockQuery, setup, mainQuery);
 
-      expect(releaseFn).toHaveBeenCalled();
       expect(mockQuery).toHaveBeenCalledWith('SET ROLE "old_role"');
     });
 
@@ -490,24 +488,24 @@ describe('storage', () => {
     });
 
     it('should restore config to previous value after withOptions', async () => {
-      await db.$query`SELECT set_config('app.null_test', 'original', false)`;
+      await db.$query`SELECT set_config('app.test', 'original', false)`;
       const beforeResult = await db.$query<{ val: string }>`
-        SELECT current_setting('app.null_test', true) as val
+        SELECT current_setting('app.test', true) as val
       `;
       expect(beforeResult.rows[0].val).toBe('original');
 
       await db.$withOptions(
-        { setConfig: { 'app.null_test': 'temp_value' } },
+        { setConfig: { 'app.test': 'temp_value' } },
         async () => {
           const duringResult = await db.$query<{ val: string }>`
-            SELECT current_setting('app.null_test', true) as val
+            SELECT current_setting('app.test', true) as val
           `;
           expect(duringResult.rows[0].val).toBe('temp_value');
         },
       );
 
       const afterResult = await db.$query<{ val: string }>`
-        SELECT current_setting('app.null_test', true) as val
+        SELECT current_setting('app.test', true) as val
       `;
       expect(afterResult.rows[0].val).toBe('original');
     });

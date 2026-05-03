@@ -1,4 +1,4 @@
-import { AdapterBase } from 'pqb/internal';
+import { Adapter } from 'pqb/internal';
 import {
   MigrateFn,
   migrate,
@@ -10,7 +10,7 @@ import { RakeDbConfig } from '../config';
 const makeMigrateOrRollback =
   (fn: MigrateFn) =>
   async (
-    adapters: AdapterBase[],
+    adapters: Adapter[],
     config: RakeDbConfig,
     args: string[],
   ): Promise<void> => {

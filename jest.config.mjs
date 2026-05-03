@@ -6,7 +6,7 @@ const rootDir = path.dirname(fileURLToPath(import.meta.url));
 export default {
   rootDir: path.resolve('src'),
   coverageDirectory: path.resolve('coverage'),
-  setupFiles: ['dotenv/config'],
+  setupFiles: [path.join(rootDir, 'jest-load-env.cjs')],
   globalSetup: path.join(rootDir, 'jest-global-setup.ts'),
   setupFilesAfterEnv: [path.join(rootDir, 'jest-setup.ts')],
   transform: {

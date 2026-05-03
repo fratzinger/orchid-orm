@@ -12,7 +12,7 @@ import {
   SelectItem,
 } from '../../basic-features/select/select.sql';
 import { maybeWrappedThen } from '../../then/then';
-import { AdapterBase } from 'pqb/internal';
+import { Adapter } from 'pqb/internal';
 
 export const checkIfNeedResultAllForMutativeQueriesSelectRelations = (
   sql: MutativeQueriesSelectRelationsSqlProp,
@@ -29,7 +29,7 @@ export const checkIfShouldReleaseSavepointForMutativeQueriesSelectRelations = (
 export const loadMutativeQueriesSelectRelations = (
   sql: MutativeQueriesSelectRelationsSqlProp,
   result: unknown,
-  adapter: AdapterBase,
+  adapter: Adapter,
   startingSavepoint?: string,
   renames?: RecordString,
 ): Promise<void> | undefined =>
@@ -46,7 +46,7 @@ export const loadMutativeQueriesSelectRelations = (
 export const loadRelations = async (
   state: MutativeQueriesSelectRelationsSqlState,
   result: unknown,
-  adapter: AdapterBase,
+  adapter: Adapter,
   startingSavepoint?: string,
   renames?: RecordString,
 ): Promise<void> => {

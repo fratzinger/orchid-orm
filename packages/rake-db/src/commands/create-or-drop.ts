@@ -18,12 +18,12 @@ export class CreateOrDropError extends Error {
 export type CreateOrDropOk = 'done' | 'already';
 
 /**
- * To create a database, reconfigure the connection with a power user and an existing database to connect to.
+ * To create a database, clone the connection with a power user and an existing database to connect to.
  *
  * ```ts
  * import { createDatabase } from 'orchid-orm/migrations';
  *
- * const adapter = db.$adapter.reconfigure({
+ * const adapter = db.$adapter.clone({
  *   user: 'postgres',
  *   database: 'postgres',
  * });
@@ -51,14 +51,14 @@ export const createDatabase = async (
 };
 
 /**
- * To drop a database, reconfigure the connection with a power user and a different database to connect to.
+ * To drop a database, clone the connection with a power user and a different database to connect to.
  *
  * Ensure the connections to the database are closed before dropping, because Postgres won't be able to drop it otherwise.
  *
  * ```ts
  * import { createDatabase } from 'orchid-orm/migrations';
  *
- * const adapter = db.$adapter.reconfigure({
+ * const adapter = db.$adapter.clone({
  *   user: 'postgres',
  *   database: 'postgres',
  * });

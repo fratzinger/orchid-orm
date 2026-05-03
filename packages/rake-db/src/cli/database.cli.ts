@@ -1,4 +1,4 @@
-import { AdapterBase } from 'pqb/internal';
+import { Adapter } from 'pqb/internal';
 import { promptConfirm, promptText } from '../prompt';
 import {
   createDatabase,
@@ -13,19 +13,19 @@ import { runRecurrentMigrations } from '../commands/recurrent';
 import { RakeDbConfig } from '../config';
 
 export const createDatabaseCommand = (
-  adapters: AdapterBase[],
+  adapters: Adapter[],
   config: RakeDbConfig,
   dontClose?: boolean,
 ): Promise<void> => createOrDropDatabase('create', adapters, config, dontClose);
 
 export const dropDatabaseCommand = (
-  adapters: AdapterBase[],
+  adapters: Adapter[],
   config: RakeDbConfig,
 ): Promise<void> => createOrDropDatabase('drop', adapters, config);
 
 export const createOrDropDatabase = async (
   action: 'create' | 'drop',
-  adapters: AdapterBase[],
+  adapters: Adapter[],
   config: RakeDbConfig,
   dontClose?: boolean,
 ): Promise<void> => {
@@ -35,33 +35,29 @@ export const createOrDropDatabase = async (
     const database = adapter.getDatabase();
     const owner = adapter.getUser();
 
-    const res = await run(
-      adapter.reconfigure({ database: 'postgres' }),
-      config,
-      {
-        command: (adapter: AdapterBase) =>
-          fn(adapter, {
-            database,
-            owner,
-          }),
-        doneMessage: () =>
-          `Database ${database} successfully ${
-            action === 'create' ? 'created' : 'dropped'
-          }`,
-        alreadyMessage: () =>
-          `Database ${database} ${
-            action === 'create' ? 'already exists' : 'does not exist'
-          }`,
-        deniedMessage: () => `Permission denied to ${action} database.`,
-        askAdminCreds: () => askForAdminCredentials(action === 'create'),
-      },
-    );
+    const res = await run(adapter.clone({ database: 'postgres' }), config, {
+      command: (adapter: Adapter) =>
+        fn(adapter, {
+          database,
+          owner,
+        }),
+      doneMessage: () =>
+        `Database ${database} successfully ${
+          action === 'create' ? 'created' : 'dropped'
+        }`,
+      alreadyMessage: () =>
+        `Database ${database} ${
+          action === 'create' ? 'already exists' : 'does not exist'
+        }`,
+      deniedMessage: () => `Permission denied to ${action} database.`,
+      askAdminCreds: () => askForAdminCredentials(action === 'create'),
+    });
 
     if (!res) continue;
 
     if (action === 'create') {
       await adapter.transaction(async (tx) => {
-        const schema = tx.getSchema();
+        const schema = adapter.getSchema();
         if (schema) {
           const quoted = `"${
             typeof schema === 'function' ? schema() : schema
@@ -83,7 +79,7 @@ export const createOrDropDatabase = async (
 };
 
 export const resetDatabaseCommand = async (
-  adapters: AdapterBase[],
+  adapters: Adapter[],
   config: RakeDbConfig,
 ) => {
   await createOrDropDatabase('drop', adapters, config);
@@ -98,10 +94,10 @@ export const resetDatabaseCommand = async (
 };
 
 const run = async (
-  adapter: AdapterBase,
+  adapter: Adapter,
   config: RakeDbConfig,
   params: {
-    command: (adapter: AdapterBase) => Promise<CreateOrDropOk>;
+    command: (adapter: Adapter) => Promise<CreateOrDropOk>;
     doneMessage(): string;
     alreadyMessage(): string;
     deniedMessage(): string;
@@ -136,7 +132,7 @@ const run = async (
         const creds = await params.askAdminCreds();
         if (!creds) return false;
 
-        return run(adapter.reconfigure(creds), config, params);
+        return run(adapter.clone(creds), config, params);
       }
     }
 
